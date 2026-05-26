@@ -1,0 +1,195 @@
+{
+  "suite_name": "nyu_ctf",
+  "version": "1.0",
+  "test_cases": [
+    {
+      "id": "ctf_rsa_001",
+      "category": "crypto",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_rsa_001",
+      "expected_findings": [
+        {
+          "title": "RSA weak key generation",
+          "severity": "high",
+          "cwe_id": "CWE-327",
+          "category": "crypto"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_aes_002",
+      "category": "crypto",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_aes_002",
+      "expected_findings": [
+        {
+          "title": "AES ECB mode usage",
+          "severity": "medium",
+          "cwe_id": "CWE-328",
+          "category": "crypto"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_bof_001",
+      "category": "pwn",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_bof_001",
+      "expected_findings": [
+        {
+          "title": "Buffer overflow in C binary",
+          "severity": "critical",
+          "cwe_id": "CWE-120",
+          "category": "pwn"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_fmt_002",
+      "category": "pwn",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_fmt_002",
+      "expected_findings": [
+        {
+          "title": "Format string vulnerability",
+          "severity": "high",
+          "cwe_id": "CWE-134",
+          "category": "pwn"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_heap_003",
+      "category": "pwn",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_heap_003",
+      "expected_findings": [
+        {
+          "title": "Heap use-after-free",
+          "severity": "high",
+          "cwe_id": "CWE-416",
+          "category": "pwn"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_cookie_001",
+      "category": "web",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_cookie_001",
+      "expected_findings": [
+        {
+          "title": "Insecure cookie handling",
+          "severity": "medium",
+          "cwe_id": "CWE-614",
+          "category": "web"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_path_002",
+      "category": "web",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_path_002",
+      "expected_findings": [
+        {
+          "title": "Path traversal in file read",
+          "severity": "high",
+          "cwe_id": "CWE-22",
+          "category": "web"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_rev_001",
+      "category": "reversing",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_rev_001",
+      "expected_findings": [
+        {
+          "title": "Hardcoded credentials in binary",
+          "severity": "medium",
+          "cwe_id": "CWE-798",
+          "category": "reversing"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_steg_001",
+      "category": "forensics",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_steg_001",
+      "expected_findings": [
+        {
+          "title": "Steganography in image file",
+          "severity": "low",
+          "cwe_id": "CWE-200",
+          "category": "forensics"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_log_002",
+      "category": "forensics",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_log_002",
+      "expected_findings": [
+        {
+          "title": "Credential leak in memory dump",
+          "severity": "high",
+          "cwe_id": "CWE-200",
+          "category": "forensics"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ctf_social_001",
+      "category": "misc",
+      "target_url": "http://benchmark.local/nyu_ctf/ctf_social_001",
+      "expected_findings": [
+        {
+          "title": "Social engineering challenge",
+          "severity": "low",
+          "cwe_id": "CWE-200",
+          "category": "misc"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "safe_nyu_ctf_001",
+      "category": "safe",
+      "target_url": "http://benchmark.local/nyu_ctf/safe_1",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    },
+    {
+      "id": "safe_nyu_ctf_002",
+      "category": "safe",
+      "target_url": "http://benchmark.local/nyu_ctf/safe_2",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    },
+    {
+      "id": "safe_nyu_ctf_003",
+      "category": "safe",
+      "target_url": "http://benchmark.local/nyu_ctf/safe_3",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    }
+  ]
+}

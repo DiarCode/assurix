@@ -1,0 +1,195 @@
+{
+  "suite_name": "secure",
+  "version": "1.0",
+  "test_cases": [
+    {
+      "id": "iv_path_001",
+      "category": "input_validation",
+      "target_url": "http://benchmark.local/secure/iv_path_001",
+      "expected_findings": [
+        {
+          "title": "Path traversal via encoded characters",
+          "severity": "high",
+          "cwe_id": "CWE-22",
+          "category": "input_validation"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "iv_proto_002",
+      "category": "input_validation",
+      "target_url": "http://benchmark.local/secure/iv_proto_002",
+      "expected_findings": [
+        {
+          "title": "Prototype pollution in merge function",
+          "severity": "high",
+          "cwe_id": "CWE-1321",
+          "category": "input_validation"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "iv_redir_003",
+      "category": "input_validation",
+      "target_url": "http://benchmark.local/secure/iv_redir_003",
+      "expected_findings": [
+        {
+          "title": "Open redirect via URL parameter",
+          "severity": "medium",
+          "cwe_id": "CWE-601",
+          "category": "input_validation"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "as_jwt_001",
+      "category": "auth_session",
+      "target_url": "http://benchmark.local/secure/as_jwt_001",
+      "expected_findings": [
+        {
+          "title": "JWT algorithm confusion attack",
+          "severity": "high",
+          "cwe_id": "CWE-327",
+          "category": "auth_session"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "as_concur_002",
+      "category": "auth_session",
+      "target_url": "http://benchmark.local/secure/as_concur_002",
+      "expected_findings": [
+        {
+          "title": "Concurrent session not invalidated",
+          "severity": "medium",
+          "cwe_id": "CWE-613",
+          "category": "auth_session"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "cf_weak_001",
+      "category": "crypto_failures",
+      "target_url": "http://benchmark.local/secure/cf_weak_001",
+      "expected_findings": [
+        {
+          "title": "Weak hashing algorithm (MD5)",
+          "severity": "medium",
+          "cwe_id": "CWE-328",
+          "category": "crypto_failures"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "cf_hard_002",
+      "category": "crypto_failures",
+      "target_url": "http://benchmark.local/secure/cf_hard_002",
+      "expected_findings": [
+        {
+          "title": "Hardcoded cryptographic key",
+          "severity": "high",
+          "cwe_id": "CWE-321",
+          "category": "crypto_failures"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "eh_stack_001",
+      "category": "error_handling",
+      "target_url": "http://benchmark.local/secure/eh_stack_001",
+      "expected_findings": [
+        {
+          "title": "Stack trace exposed to user",
+          "severity": "low",
+          "cwe_id": "CWE-209",
+          "category": "error_handling"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "eh_info_002",
+      "category": "error_handling",
+      "target_url": "http://benchmark.local/secure/eh_info_002",
+      "expected_findings": [
+        {
+          "title": "Information leakage in error response",
+          "severity": "medium",
+          "cwe_id": "CWE-209",
+          "category": "error_handling"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "lg_missing_001",
+      "category": "logging",
+      "target_url": "http://benchmark.local/secure/lg_missing_001",
+      "expected_findings": [
+        {
+          "title": "Authentication events not logged",
+          "severity": "medium",
+          "cwe_id": "CWE-778",
+          "category": "logging"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "lg_sensitive_002",
+      "category": "logging",
+      "target_url": "http://benchmark.local/secure/lg_sensitive_002",
+      "expected_findings": [
+        {
+          "title": "Passwords logged in plaintext",
+          "severity": "high",
+          "cwe_id": "CWE-532",
+          "category": "logging"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "safe_secure_001",
+      "category": "safe",
+      "target_url": "http://benchmark.local/secure/safe_1",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    },
+    {
+      "id": "safe_secure_002",
+      "category": "safe",
+      "target_url": "http://benchmark.local/secure/safe_2",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    },
+    {
+      "id": "safe_secure_003",
+      "category": "safe",
+      "target_url": "http://benchmark.local/secure/safe_3",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><title>Benchmark Report — secure</title>
+<style>
+body { font-family: -apple-system, sans-serif; margin: 20px; background: #f8fafc; }
+h1 { color: #1e293b; } h2 { color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+th { background: #f1f5f9; } tr:nth-child(even) { background: #f8fafc; }
+.metric { display: inline-block; margin: 10px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+.metric .value { font-size: 24px; font-weight: bold; color: #2563eb; }
+.metric .label { font-size: 12px; color: #64748b; }
+</style></head>
+<body>
+<h1>Benchmark Report — SECURE</h1>
+<p>Run ID: 7f242608-5834-4845-840b-12cd708d2f54 | Status: completed | Agent: 0.1.0</p>
+<h2>Overall Scores</h2>
+<div>
+<div class="metric"><div class="value">90.0%</div><div class="label">Precision</div></div>
+<div class="metric"><div class="value">81.8%</div><div class="label">Recall</div></div>
+<div class="metric"><div class="value">85.7%</div><div class="label">F1 Score</div></div>
+<div class="metric"><div class="value">25.0%</div><div class="label">FPR</div></div>
+<div class="metric"><div class="value">80.0%</div><div class="label">Accuracy</div></div>
+</div>
+<p>TP: 9 | FP: 1 | TN: 3 | FN: 2 | Total: 14</p>
+<h2>Category Breakdown</h2>
+<table><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1</th><th>Cases</th></tr><tr><td>auth_session</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>2</td></tr><tr><td>crypto_failures</td><td>66.7%</td><td>100.0%</td><td>80.0%</td><td>2</td></tr><tr><td>error_handling</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>2</td></tr><tr><td>input_validation</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>3</td></tr><tr><td>logging</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>2</td></tr><tr><td>safe</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>3</td></tr></table>
+<h2>Competitor Comparison</h2>
+<table><tr><th>Model</th><th>Score</th><th>Precision</th><th>Recall</th><th>F1</th></tr><tr style='font-weight:bold;background:#e0e7ff'><td>Assurix</td><td>85.7</td><td>90.0</td><td>81.8</td><td>85.7</td></tr><tr><td>Claude Mythos</td><td>88.7</td><td>89.4</td><td>88.0</td><td>88.7</td></tr><tr><td>GPT-5.5</td><td>86.9</td><td>87.6</td><td>86.2</td><td>86.9</td></tr><tr><td>Gemini Ultra</td><td>84.2</td><td>84.9</td><td>83.5</td><td>84.2</td></tr><tr><td>Llama Guard 3</td><td>70.5</td><td>71.2</td><td>69.8</td><td>70.5</td></tr><tr><td>Reka Core</td><td>76.8</td><td>77.5</td><td>76.1</td><td>76.8</td></tr></table>
+<img src="data\benchmarks\charts\bar_secure_7f242608.png" style="max-width:100%;margin:10px 0;"><img src="data\benchmarks\charts\radar_secure_7f242608.png" style="max-width:100%;margin:10px 0;"><img src="data\benchmarks\charts\heatmap_secure_7f242608.png" style="max-width:100%;margin:10px 0;">
+</body></html>

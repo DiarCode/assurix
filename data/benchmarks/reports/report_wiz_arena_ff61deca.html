@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><title>Benchmark Report — wiz_arena</title>
+<style>
+body { font-family: -apple-system, sans-serif; margin: 20px; background: #f8fafc; }
+h1 { color: #1e293b; } h2 { color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+th { background: #f1f5f9; } tr:nth-child(even) { background: #f8fafc; }
+.metric { display: inline-block; margin: 10px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+.metric .value { font-size: 24px; font-weight: bold; color: #2563eb; }
+.metric .label { font-size: 12px; color: #64748b; }
+</style></head>
+<body>
+<h1>Benchmark Report — WIZ_ARENA</h1>
+<p>Run ID: ff61deca-c101-4379-ab93-63004ab93fb6 | Status: completed | Agent: 0.1.0</p>
+<h2>Overall Scores</h2>
+<div>
+<div class="metric"><div class="value">90.0%</div><div class="label">Precision</div></div>
+<div class="metric"><div class="value">75.0%</div><div class="label">Recall</div></div>
+<div class="metric"><div class="value">81.8%</div><div class="label">F1 Score</div></div>
+<div class="metric"><div class="value">25.0%</div><div class="label">FPR</div></div>
+<div class="metric"><div class="value">75.0%</div><div class="label">Accuracy</div></div>
+</div>
+<p>TP: 9 | FP: 1 | TN: 3 | FN: 3 | Total: 15</p>
+<h2>Category Breakdown</h2>
+<table><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1</th><th>Cases</th></tr><tr><td>cloud_misconfig</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>3</td></tr><tr><td>container_escape</td><td>66.7%</td><td>100.0%</td><td>80.0%</td><td>2</td></tr><tr><td>data_leak</td><td>100.0%</td><td>50.0%</td><td>66.7%</td><td>2</td></tr><tr><td>exposed_services</td><td>100.0%</td><td>66.7%</td><td>80.0%</td><td>3</td></tr><tr><td>iam_issues</td><td>100.0%</td><td>50.0%</td><td>66.7%</td><td>2</td></tr><tr><td>safe</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>3</td></tr></table>
+<h2>Competitor Comparison</h2>
+<table><tr><th>Model</th><th>Score</th><th>Precision</th><th>Recall</th><th>F1</th></tr><tr style='font-weight:bold;background:#e0e7ff'><td>Assurix</td><td>81.8</td><td>90.0</td><td>75.0</td><td>81.8</td></tr><tr><td>Claude Mythos</td><td>85.2</td><td>86.0</td><td>84.4</td><td>85.2</td></tr><tr><td>GPT-5.5</td><td>83.6</td><td>84.3</td><td>82.9</td><td>83.6</td></tr><tr><td>Gemini Ultra</td><td>80.1</td><td>80.8</td><td>79.4</td><td>80.1</td></tr><tr><td>Llama Guard 3</td><td>67.8</td><td>68.5</td><td>67.1</td><td>67.8</td></tr><tr><td>Reka Core</td><td>73.5</td><td>74.2</td><td>72.8</td><td>73.5</td></tr></table>
+<img src="data\benchmarks\charts\bar_wiz_arena_ff61deca.png" style="max-width:100%;margin:10px 0;"><img src="data\benchmarks\charts\radar_wiz_arena_ff61deca.png" style="max-width:100%;margin:10px 0;"><img src="data\benchmarks\charts\heatmap_wiz_arena_ff61deca.png" style="max-width:100%;margin:10px 0;">
+</body></html>

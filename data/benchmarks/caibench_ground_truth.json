@@ -1,0 +1,210 @@
+{
+  "suite_name": "caibench",
+  "version": "1.0",
+  "test_cases": [
+    {
+      "id": "inj_cmd_001",
+      "category": "injection",
+      "target_url": "http://benchmark.local/caibench/inj_cmd_001",
+      "expected_findings": [
+        {
+          "title": "Command injection in ping utility",
+          "severity": "critical",
+          "cwe_id": "CWE-78",
+          "category": "injection"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "inj_ldap_002",
+      "category": "injection",
+      "target_url": "http://benchmark.local/caibench/inj_ldap_002",
+      "expected_findings": [
+        {
+          "title": "LDAP injection in search",
+          "severity": "high",
+          "cwe_id": "CWE-90",
+          "category": "injection"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "inj_xpath_003",
+      "category": "injection",
+      "target_url": "http://benchmark.local/caibench/inj_xpath_003",
+      "expected_findings": [
+        {
+          "title": "XPath injection in XML endpoint",
+          "severity": "medium",
+          "cwe_id": "CWE-91",
+          "category": "injection"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ba_session_001",
+      "category": "broken_auth",
+      "target_url": "http://benchmark.local/caibench/ba_session_001",
+      "expected_findings": [
+        {
+          "title": "Session fixation vulnerability",
+          "severity": "high",
+          "cwe_id": "CWE-384",
+          "category": "broken_auth"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ba_creds_002",
+      "category": "broken_auth",
+      "target_url": "http://benchmark.local/caibench/ba_creds_002",
+      "expected_findings": [
+        {
+          "title": "Weak credential policy",
+          "severity": "medium",
+          "cwe_id": "CWE-521",
+          "category": "broken_auth"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "sd_encrypt_001",
+      "category": "sensitive_data",
+      "target_url": "http://benchmark.local/caibench/sd_encrypt_001",
+      "expected_findings": [
+        {
+          "title": "Sensitive data transmitted without encryption",
+          "severity": "high",
+          "cwe_id": "CWE-319",
+          "category": "sensitive_data"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "sd_pii_002",
+      "category": "sensitive_data",
+      "target_url": "http://benchmark.local/caibench/sd_pii_002",
+      "expected_findings": [
+        {
+          "title": "PII exposed in API response",
+          "severity": "high",
+          "cwe_id": "CWE-359",
+          "category": "sensitive_data"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "mc_cors_001",
+      "category": "misconfig",
+      "target_url": "http://benchmark.local/caibench/mc_cors_001",
+      "expected_findings": [
+        {
+          "title": "Overly permissive CORS configuration",
+          "severity": "medium",
+          "cwe_id": "CWE-942",
+          "category": "misconfig"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "mc_headers_002",
+      "category": "misconfig",
+      "target_url": "http://benchmark.local/caibench/mc_headers_002",
+      "expected_findings": [
+        {
+          "title": "Missing security headers",
+          "severity": "low",
+          "cwe_id": "CWE-693",
+          "category": "misconfig"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "mc_debug_003",
+      "category": "misconfig",
+      "target_url": "http://benchmark.local/caibench/mc_debug_003",
+      "expected_findings": [
+        {
+          "title": "Debug interface exposed in production",
+          "severity": "high",
+          "cwe_id": "CWE-489",
+          "category": "misconfig"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ac_role_001",
+      "category": "access_control",
+      "target_url": "http://benchmark.local/caibench/ac_role_001",
+      "expected_findings": [
+        {
+          "title": "Privilege escalation via role manipulation",
+          "severity": "high",
+          "cwe_id": "CWE-269",
+          "category": "access_control"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "ac_api_002",
+      "category": "access_control",
+      "target_url": "http://benchmark.local/caibench/ac_api_002",
+      "expected_findings": [
+        {
+          "title": "API key stored in client-side code",
+          "severity": "medium",
+          "cwe_id": "CWE-798",
+          "category": "access_control"
+        }
+      ],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "safe_caibench_001",
+      "category": "safe",
+      "target_url": "http://benchmark.local/caibench/safe_1",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    },
+    {
+      "id": "safe_caibench_002",
+      "category": "safe",
+      "target_url": "http://benchmark.local/caibench/safe_2",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    },
+    {
+      "id": "safe_caibench_003",
+      "category": "safe",
+      "target_url": "http://benchmark.local/caibench/safe_3",
+      "expected_findings": [],
+      "expected_safe": true,
+      "timeout_seconds": 60
+    }
+  ]
+}
