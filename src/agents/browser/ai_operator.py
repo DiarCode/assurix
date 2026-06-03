@@ -1,9 +1,18 @@
-"""AI-driven browser operator using browser-use for autonomous security testing."""
+"""AI-driven browser operator using browser-use for autonomous security testing.
+
+DEPRECATED: Use AgentBrowserOperator (src.agents.browser.agent_browser_operator)
+as the primary browser automation. agent-browser (Vercel) provides a
+deterministic snapshot+ref workflow, native Rust CLI performance, and
+built-in network introspection. AIBrowserOperator is retained for
+backward compatibility but will be removed once ReconAgent and
+WebappAgent complete their migration.
+"""
 
 import asyncio
 import glob
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -102,17 +111,40 @@ class AIBrowserOperator:
 
     @staticmethod
     def _find_chrome() -> str | None:
-        """Find installed Playwright/Chrome binary for browser-use."""
+        """Find installed Playwright/Chrome binary for browser-use.
+
+        Playwright's cache directory differs by platform:
+        - Linux:   ``~/.cache/ms-playwright/``
+        - macOS:   ``~/Library/Caches/ms-playwright/``
+        - Windows: ``%LOCALAPPDATA%/ms-playwright/``
+
+        Each cached Chromium build contains a platform-specific binary tree:
+        - Linux:   ``chrome-linux/chrome``
+        - macOS:   ``chrome-mac/Chromium.app/Contents/MacOS/Chromium`` (intel)
+                   ``chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium`` (apple silicon)
+        - Windows: ``chrome-win/chrome.exe`` or ``chrome-win64/chrome.exe``
+        """
         home = os.path.expanduser("~")
-        if os.name == "nt":
+        if sys.platform == "win32":
             patterns = [
                 f"{home}/AppData/Local/ms-playwright/chromium-*/chrome-win64/chrome.exe",
                 f"{home}/AppData/Local/ms-playwright/chromium-*/chrome-win/chrome.exe",
             ]
+        elif sys.platform == "darwin":
+            patterns = [
+                f"{home}/Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium",
+                f"{home}/Library/Caches/ms-playwright/chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+                f"{home}/Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+                f"{home}/Library/Caches/ms-playwright/chromium-*/chrome-mac/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            ]
         else:
+            # Linux / other unix
             patterns = [
                 f"{home}/.cache/ms-playwright/chromium-*/chrome-linux/chrome",
-                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/usr/bin/google-chrome",
+                "/usr/bin/chromium",
+                "/usr/bin/chromium-browser",
             ]
         for pattern in patterns:
             matches = sorted(glob.glob(pattern), reverse=True)
