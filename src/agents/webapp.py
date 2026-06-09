@@ -12,6 +12,7 @@ from src.agents.browser.ai_operator import AIBrowserOperator
 from src.agents.browser.memory import FindingMemory
 from src.agents.browser.missing_code import MissingCodeDetector
 from src.agents.browser.operator import BrowserOperator
+from src.agents.browser.session import BrowserSession, BrowserSessionConfig
 from src.core.audit import log_action
 from src.core.config import get_settings
 
@@ -24,6 +25,17 @@ class WebappAgent(BaseAgent):
     """Runs HTTP-level checks + AI-driven browser vulnerability investigations."""
 
     name = "webapp"
+
+    def __init__(self, browser_session: BrowserSession | None = None) -> None:
+        # Plan §3.1.3.bis: WebappAgent MUST use BrowserSession, not construct
+        # AIBrowserOperator or BrowserOperator directly. The session is
+        # optional to keep the call site in agent.run() flexible, but if
+        # not provided, a session is constructed with default config
+        # (primary_operator="agent").
+        self.browser_session = browser_session or BrowserSession(
+            engagement_id="default",  # overridden by execute()'s engagement_id
+            config=BrowserSessionConfig(primary_operator="agent"),
+        )
 
     async def execute(self, payload: dict[str, Any], session: AsyncSession) -> dict[str, Any]:
         previous = payload.get("previous_result", {})
@@ -48,6 +60,10 @@ class WebappAgent(BaseAgent):
         artifacts: list[dict] = []
         tests_run: list[dict] = []
 
+        # Seed pre-authenticated cookies if provided (benchmark DVWA support)
+        auth_cookies = payload.get("auth_cookies")
+        client_cookies = auth_cookies if auth_cookies else None
+
         # Phase 1: HTTP-level fast checks (no browser needed)
         hf = self._analyze_security_headers(headers, target_url)
         findings.extend(hf)
@@ -65,7 +81,7 @@ class WebappAgent(BaseAgent):
         findings.extend(idf)
         tests_run.append({"test": "info_disclosure", "findings": len(idf)})
 
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=False, http2=True) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=False, http2=True, cookies=client_cookies) as client:
             injf = await self._test_injection_reflection(client, target_url, forms, endpoints)
             findings.extend(injf)
             tests_run.append({"test": "injection_reflection", "findings": len(injf)})
@@ -140,7 +156,7 @@ class WebappAgent(BaseAgent):
             context_parts.append(f"Suspicious points: {'; '.join(sp_summaries)}")
         context = "\n".join(context_parts)
 
-        ai_browser = AIBrowserOperator(engagement_id=engagement_id)
+        ai_browser = self.browser_session.ai_operator
         try:
             await ai_browser.start()
 
@@ -251,7 +267,7 @@ class WebappAgent(BaseAgent):
             artifacts.append({"type": "ai_error", "content": str(exc)})
 
             # Fallback: scripted browser tests
-            browser = BrowserOperator()
+            browser = self.browser_session.legacy_operator
             await browser.start()
             try:
                 domf = await self._test_dom_xss(browser, target_url, inputs, text_content)

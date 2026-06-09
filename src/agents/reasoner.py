@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,8 @@ from src.agents.adversarial import AdversarialValidator
 from src.core.audit import log_action
 from src.core.config import get_settings
 from src.graph.attack_graph import AttackGraphBuilder
-from src.llm.client import OllamaClient
+from src.llm.frontier_client import UnifiedLLMClient
+from src.llm.json_utils import extract_json_from_response
 from src.patterns.library import VulnerabilityPatternLibrary
 from src.reasoning.trust import TrustScorer
 from src.agents.tools.severity_adjuster import SeverityAdjuster
@@ -144,7 +146,7 @@ class ReasonerAgent(BaseAgent):
         memory = FindingMemory(engagement_id=engagement_id, artifacts_dir=settings.artifacts_dir)
         memory_context = memory.get_context_summary()
 
-        llm = OllamaClient()
+        llm = UnifiedLLMClient()
         try:
             findings_json = json.dumps(raw_findings[:30], indent=2, default=str)[:6000]
             surface_summary = {
@@ -223,6 +225,7 @@ class ReasonerAgent(BaseAgent):
 
             # Build causal attack graph from findings
             attack_paths = result.get("attack_paths", [])
+            chain_payload: list[dict[str, Any]] = []
             if validated_findings and len(validated_findings) >= 2:
                 try:
                     graph_builder = AttackGraphBuilder()
@@ -230,8 +233,52 @@ class ReasonerAgent(BaseAgent):
                     if graph_result.get("attack_paths"):
                         attack_paths = graph_result["attack_paths"]
                         result["attack_paths"] = attack_paths
+                    # Plan §3.3.1: feed the BFS-derived chains into
+                    # the reasoner output. The chainer is a pure
+                    # consumer of the graph; it never blocks the
+                    # main reasoner path because it runs in O(edges)
+                    # with the closed capability vocabulary.
+                    from src.graph.exploit_chains import ExploitChainer
+                    chainer = ExploitChainer()
+                    chains = await chainer.find_chains(
+                        findings=validated_findings,
+                        surface=surface,
+                        graph=graph_result,
+                    )
+                    chain_payload = [c.to_dict() for c in chains]
+                    if chain_payload:
+                        # Surface chains alongside the LLM-built
+                        # attack_paths so the reporter and the
+                        # ``GET /scans/{id}/chains`` endpoint can
+                        # consume them.
+                        existing = result.get("chains") or []
+                        result["chains"] = existing + chain_payload
+                    # Persist chains on the Engagement row (plan §3.3.1)
+                    # so the read endpoint is a single column fetch —
+                    # no LLM call, no graph rebuild, no fallback shim.
+                    try:
+                        from src.db.models import Engagement
+                        engagement = await session.get(Engagement, engagement_id)
+                        if engagement is not None:
+                            # Append, don't clobber — multiple iterations
+                            # of the reasoner should accumulate.
+                            prior = list(engagement.chains or [])
+                            # Dedup by Chain.name to avoid the same chain
+                            # being re-emitted when the same edge is
+                            # rediscovered on a later iteration.
+                            seen_names = {c.get("name") for c in prior}
+                            for c in chain_payload:
+                                if c.get("name") not in seen_names:
+                                    prior.append(c)
+                                    seen_names.add(c.get("name"))
+                            engagement.chains = prior
+                            engagement.chain_run_at = datetime.now(UTC)
+                    except Exception as exc:
+                        # Persistence is best-effort: a failed write
+                        # must not block the main reasoner path.
+                        logger.warning("Failed to persist chains: %s", exc)
                 except Exception as exc:
-                    logger.warning("Attack graph building failed: %s", exc)
+                    logger.warning("Attack graph/chains failed: %s", exc)
 
             # Trust scoring for all findings
             try:
@@ -335,8 +382,7 @@ class ReasonerAgent(BaseAgent):
 
     def _parse_response(self, response: str) -> dict[str, Any]:
         """Extract JSON from LLM response using robust centralized parser."""
-        from src.llm.client import OllamaClient
-        result = OllamaClient.extract_json(response)
+        result = extract_json_from_response(response)
         if isinstance(result, dict):
             return result
         return {"validated_findings": [], "attack_paths": []}

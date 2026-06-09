@@ -1,20 +1,21 @@
 """Async Ollama client wrapper with retry and fallback."""
 
 import asyncio
-import json
 import logging
-import re
 from typing import Any
 
 import ollama as _ollama
 
 from src.core.config import get_settings
 from src.core.exceptions import LLMError
+from src.llm.json_utils import extract_json_from_response
 from src.llm.router import select_model, select_temperature
 
 logger = logging.getLogger(__name__)
 
-_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
+# Backward-compat alias — re-exported for modules that imported the regex.
+# New code should import from src.llm.json_utils instead.
+__all__ = ["OllamaClient"]
 
 
 class OllamaClient:
@@ -30,6 +31,8 @@ class OllamaClient:
             self._kwargs["headers"] = {"Authorization": f"Bearer {settings.ollama_api_key}"}
         self._fast_model = settings.ollama_fast_model
         self._reasoning_model = settings.ollama_reasoning_model
+        self._exploitation_model = settings.ollama_exploitation_model
+        self._num_ctx = settings.ollama_num_ctx
 
     async def _client(self) -> _ollama.AsyncClient:
         return _ollama.AsyncClient(**self._kwargs)
@@ -37,10 +40,15 @@ class OllamaClient:
     async def _call_with_retry(self, call_fn, model_name: str) -> Any:
         """Execute an LLM call with retries and model fallback on failure."""
         models_to_try = [model_name]
-        if model_name == self._reasoning_model:
+        if model_name == self._exploitation_model:
+            models_to_try.append(self._reasoning_model)
+            models_to_try.append(self._fast_model)
+        elif model_name == self._reasoning_model:
+            models_to_try.append(self._exploitation_model)
             models_to_try.append(self._fast_model)
         elif model_name == self._fast_model:
             models_to_try.append(self._reasoning_model)
+            models_to_try.append(self._exploitation_model)
 
         last_error = None
         for model in models_to_try:
@@ -82,10 +90,13 @@ class OllamaClient:
 
         async def _call(m: str) -> str:
             client = await self._client()
+            options: dict[str, Any] = {"temperature": temp, "num_predict": max_tokens}
+            if self._num_ctx:
+                options["num_ctx"] = self._num_ctx
             response = await client.generate(
                 model=m,
                 prompt=prompt,
-                options={"temperature": temp, "num_predict": max_tokens},
+                options=options,
             )
             return response.response
 
@@ -105,10 +116,13 @@ class OllamaClient:
 
         async def _call(m: str) -> str:
             client = await self._client()
+            options: dict[str, Any] = {"temperature": temp, "num_predict": max_tokens}
+            if self._num_ctx:
+                options["num_ctx"] = self._num_ctx
             response = await client.chat(
                 model=m,
                 messages=messages,
-                options={"temperature": temp, "num_predict": max_tokens},
+                options=options,
             )
             return response.message.content
 
@@ -116,55 +130,11 @@ class OllamaClient:
 
     @staticmethod
     def extract_json(text: str) -> dict | list | None:
-        """Extract JSON from LLM response, handling markdown fences and partial JSON."""
-        text = text.strip()
+        """DEPRECATED: Use ``src.llm.json_utils.extract_json_from_response`` instead.
 
-        # Try direct parse
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
-
-        # Try extracting from markdown code blocks
-        match = _JSON_BLOCK_RE.search(text)
-        if match:
-            try:
-                return json.loads(match.group(1).strip())
-            except json.JSONDecodeError:
-                pass
-
-        # Try finding JSON object boundaries with bracket matching
-        start = text.find("{")
-        if start >= 0:
-            depth = 0
-            for i in range(start, len(text)):
-                if text[i] == "{":
-                    depth += 1
-                elif text[i] == "}":
-                    depth -= 1
-                    if depth == 0:
-                        try:
-                            return json.loads(text[start:i + 1])
-                        except json.JSONDecodeError:
-                            break
-
-        # Try array boundaries
-        arr_start = text.find("[")
-        if arr_start >= 0:
-            depth = 0
-            for i in range(arr_start, len(text)):
-                if text[i] == "[":
-                    depth += 1
-                elif text[i] == "]":
-                    depth -= 1
-                    if depth == 0:
-                        try:
-                            return json.loads(text[arr_start:i + 1])
-                        except json.JSONDecodeError:
-                            break
-
-        logger.warning("Failed to extract JSON from LLM response (first 200 chars): %s", text[:200])
-        return None
+        Retained as a thin wrapper so legacy call sites keep working.
+        """
+        return extract_json_from_response(text)
 
     async def close(self) -> None:
         pass  # ollama library manages connections internally

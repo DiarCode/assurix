@@ -1,7 +1,6 @@
-"""EGATS Planner — BFS recon + TDI-guided exploit (plan §2.4, §3.1.5).
+"""Assurix planner — BFS recon + TDI-guided exploit.
 
-The EGATS planner is the v2 replacement for the linear ``PlannerAgent``
-(``src/agents/planner.py``). It has TWO phases:
+The planner has TWO phases:
 
   1. **BFS Recon** (30% of max_iterations budget): crawl the target's
      surface breadth-first, building an attack graph. Each new
@@ -16,14 +15,12 @@ The EGATS planner is the v2 replacement for the linear ``PlannerAgent``
      capabilities (``"we have admin now"``).
 
 The inner MCTS work is delegated to the existing
-``MCTSPlannerAgent``; the EGATS wrapper adds the BFS phase and the
-TDI sorting layer. The wrapper is wire-compatible with the existing
-``PlannerAgent.execute(payload, session)`` signature so it can be
-swapped in via ``config["use_egats"] = True`` (the default for v2).
+``MCTSPlannerAgent``; this wrapper adds the BFS phase and the
+TDI sorting layer.
 
 Dry-run mode (``config.get("dry_run", False)``) skips the inner MCTS
 rollouts and just emits the two phases of action candidates as a
-list — this is the Week 1 acceptance test target.
+list.
 """
 from __future__ import annotations
 
@@ -47,13 +44,9 @@ MAX_RECON_NODES = 200
 
 
 class EGATSPlanner(BaseAgent):
-    """BFS recon + TDI-guided exploit planner (plan §2.4).
+    """BFS recon + TDI-guided exploit planner. The only planner in Assurix."""
 
-    The planner is the v2 default. To use the legacy linear planner
-    instead, pass ``use_egats=False`` in the call site's config.
-    """
-
-    name = "planner_egats"
+    name = "planner"
 
     def __init__(
         self,

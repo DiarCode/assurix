@@ -1,4 +1,9 @@
-"""Playwright-based browser operator for deep security testing."""
+"""Playwright-based browser operator for deep security testing.
+
+DEPRECATED: Use AgentBrowserOperator (src.agents.browser.agent_browser_operator)
+as the primary browser automation. Playwright is retained only for
+internal testing of the agent-browser integration itself (per the spec).
+"""
 
 import logging
 from typing import Any

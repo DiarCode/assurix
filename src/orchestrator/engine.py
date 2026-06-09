@@ -54,21 +54,14 @@ class WorkflowEngine:
         # tests that mock ``self.agents = {}`` are unaffected.
         if _DEPTH_PASS_AGENT_AVAILABLE and DepthPassAgent is not None:
             self.agents["depth_pass"] = DepthPassAgent
-        # v2 planner registration (plan §3.1.5). ``planner`` and
-        # ``planner_egats`` both map to EGATSPlanner; ``planner_linear``
-        # is a one-release deprecation alias for the legacy linear OWASP
-        # planner. Resolution goes through
-        # ``src.agents.planner_factory.resolve_planner_class`` so the
-        # dispatch table lives in one place.
-        from src.agents.planner_factory import resolve_planner_class
+        # Planner registration. There is one planner in Assurix
+        # (EGATSPlanner), registered under the canonical name "planner".
+        from src.agents.planner_egats import EGATSPlanner
 
-        for _planner_name in ("planner", "planner_egats", "planner_linear"):
-            try:
-                self.agents[_planner_name] = resolve_planner_class(_planner_name)
-            except Exception:  # pragma: no cover — defensive
-                logger.exception(
-                    "Failed to register planner agent_name=%s", _planner_name
-                )
+        try:
+            self.agents["planner"] = EGATSPlanner
+        except Exception:  # pragma: no cover — defensive
+            logger.exception("Failed to register planner agent")
         # Phase 4a: future-key → asyncio.Future for submit_and_await() correlation.
         # _run_loop() resolves the future after agent execution completes by
         # reading the future_key from the result/payload metadata.
@@ -317,11 +310,32 @@ class WorkflowEngine:
                 )
                 async with get_db_session() as err_session:
                     await self.scheduler.mark_failed(err_session, job_id, str(exc))
+                    # Flip the engagement to FAILED so the CLI's polling
+                    # loop breaks. Without this, only the JOB is marked
+                    # failed and the engagement stays RUNNING forever, so
+                    # `assurix scan` hangs until Ctrl+C.
+                    eng = await err_session.get(Engagement, engagement_id)  # type: ignore[call-arg]
+                    if eng and EngagementStateMachine.can_transition(
+                        eng.status, EngagementStatus.FAILED
+                    ):
+                        eng.status = EngagementStatus.FAILED
+                        eng.completed_at = datetime.now(UTC)
+                        await self.events.emit(
+                            "engagement_failed",
+                            {
+                                "engagement_id": engagement_id,
+                                "agent_name": agent_name,
+                                "error": str(exc),
+                            },
+                        )
                     await log_action(
                         session=err_session,
                         action="agent_failed",
                         actor=agent_name,
-                        payload={"engagement_id": engagement_id, "error": str(exc)},
+                        payload={
+                            "engagement_id": engagement_id,
+                            "error": str(exc),
+                        },
                     )
                     await err_session.commit()
                 continue
@@ -581,36 +595,71 @@ class WorkflowEngine:
                             },
                         )
                     elif agent_name == "research_loop":
-                        if EngagementStateMachine.can_transition(
-                            engagement.status, EngagementStatus.COMPLETED
-                        ):
-                            engagement.status = EngagementStatus.COMPLETED
-                            engagement.completed_at = datetime.now(UTC)
-                            await self.events.emit(
-                                "engagement_completed",
-                                {"engagement_id": engagement_id},
-                            )
+                        # The research_loop dispatches its own sub-investigations
+                        # (pentester/webapp/reasoner) and persists findings to
+                        # the DB directly. It does NOT render a Markdown
+                        # report — that's the reporter's job. Enqueue the
+                        # reporter so the engagement always produces
+                        # `data/reports/<ts>_<target>_<eng8>.md`.
+                        reporter_payload = dict(payload)
+                        reporter_payload["previous_result"] = {
+                            **result,
+                            "validated_findings": result.get("findings", []),
+                            "target_url": result.get(
+                                "target_url", payload.get("target_url", "")
+                            ),
+                            "attack_paths": result.get("attack_paths", []),
+                            "surface": result.get("surface", {}),
+                            "analysis_notes": result.get("analysis_notes", ""),
+                        }
+                        await self.scheduler.enqueue(
+                            session=session,
+                            engagement_id=engagement_id,
+                            agent_name="reporter",
+                            payload=reporter_payload,
+                            priority=1,
+                        )
                         await log_action(
                             session=session,
-                            action="research_loop_completed",
+                            action="routed_to_reporter",
                             actor="engine",
-                            payload={"engagement_id": engagement_id},
+                            payload={
+                                "engagement_id": engagement_id,
+                                "from_agent": "research_loop",
+                                "findings": len(result.get("findings", [])),
+                            },
                         )
                     elif agent_name == "hypothesis_orchestrator":
-                        if EngagementStateMachine.can_transition(
-                            engagement.status, EngagementStatus.COMPLETED
-                        ):
-                            engagement.status = EngagementStatus.COMPLETED
-                            engagement.completed_at = datetime.now(UTC)
-                            await self.events.emit(
-                                "engagement_completed",
-                                {"engagement_id": engagement_id},
-                            )
+                        # Same routing pattern as research_loop: the
+                        # orchestrator runs its own dispatch loop and
+                        # persists findings, but never renders the report.
+                        reporter_payload = dict(payload)
+                        reporter_payload["previous_result"] = {
+                            **result,
+                            "validated_findings": result.get("findings", []),
+                            "target_url": result.get(
+                                "target_url", payload.get("target_url", "")
+                            ),
+                            "attack_paths": result.get("attack_paths", []),
+                            "surface": result.get("surface", {}),
+                            "analysis_notes": result.get("analysis_notes", ""),
+                        }
+                        await self.scheduler.enqueue(
+                            session=session,
+                            engagement_id=engagement_id,
+                            agent_name="reporter",
+                            payload=reporter_payload,
+                            priority=1,
+                        )
                         await log_action(
                             session=session,
-                            action="hypothesis_orchestrator_completed",
+                            action="routed_to_reporter",
                             actor="engine",
-                            payload={"engagement_id": engagement_id},
+                            payload={
+                                "engagement_id": engagement_id,
+                                "from_agent": "hypothesis_orchestrator",
+                                "findings": len(result.get("findings", [])),
+                            },
                         )
                     else:
                         next_agent = WorkflowRouter.next_agent(

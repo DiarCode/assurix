@@ -1,6 +1,7 @@
 """Offensive security toolkit for the PentesterAgent."""
 
 from .payload_generator import PayloadGenerator, Payload
+from .payload_mutator import PayloadMutator, Gene, MutationResult
 from .fuzzer import Fuzzer, FuzzResult
 from .brute_force import BruteForcer, BruteResult
 from .port_scanner import PortScanner, PortResult
@@ -16,9 +17,13 @@ from .graphql_scanner import GraphQLScanner, GraphQLResult
 from .websocket_scanner import WebSocketScanner, WebSocketResult
 from .session import SharedSessionManager
 from .vuln_pipelines import XSSPipeline, SQLiPipeline, SSRFPipeline, CommandInjectionPipeline, VulnResult
+from .business_logic_pipeline import WorkflowAuthPipeline, RaceConditionPipeline, IDORPipeline, BusinessRulePipeline, BusinessLogicResult
+from .protocol import ToolProtocol
+from .registry import ToolRegistry, get_registry
 
 __all__ = [
     "PayloadGenerator", "Payload",
+    "PayloadMutator", "Gene", "MutationResult",
     "Fuzzer", "FuzzResult",
     "BruteForcer", "BruteResult",
     "PortScanner", "PortResult",
@@ -34,4 +39,7 @@ __all__ = [
     "WebSocketScanner", "WebSocketResult",
     "SharedSessionManager",
     "XSSPipeline", "SQLiPipeline", "SSRFPipeline", "CommandInjectionPipeline", "VulnResult",
+    "WorkflowAuthPipeline", "RaceConditionPipeline", "IDORPipeline", "BusinessRulePipeline", "BusinessLogicResult",
+    "ToolProtocol",
+    "ToolRegistry", "get_registry",
 ]

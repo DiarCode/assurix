@@ -19,6 +19,13 @@ class BenchmarkSuite:
 
 
 BENCHMARK_SUITES: dict[str, BenchmarkSuite] = {
+    "cyberarena": BenchmarkSuite(
+        name="cyberarena",
+        description="CyberArena — Live benchmark against DVWA, Juice Shop, WebGoat with endpoint-level ground truth and ResearchLoop evaluation",
+        ground_truth_path=str(DATA_DIR / "cyberarena_ground_truth.json"),
+        categories=["sqli", "xss", "cmdi", "lfi", "csrf", "idor", "auth_bypass", "ssrf", "info_disclosure", "upload", "brute_force", "jwt"],
+        scoring_weights={"precision": 0.25, "recall": 0.30, "f1": 0.25, "fpr": 0.20},
+    ),
     "cybergym": BenchmarkSuite(
         name="cybergym",
         description="CyberGym — 1,507 real-world vulnerabilities across 188 open-source projects. PoC generation task.",

@@ -20,7 +20,8 @@ from typing import Any
 
 from src.agents.base import BaseAgent
 from src.core.config import get_settings
-from src.llm.client import OllamaClient
+from src.llm.frontier_client import UnifiedLLMClient
+from src.llm.json_utils import extract_json_from_response
 from src.patterns.library import VulnerabilityPatternLibrary
 
 logger = logging.getLogger(__name__)
@@ -263,7 +264,7 @@ class MCTSPlannerAgent(BaseAgent):
         failed_actions: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Use LLM to generate candidate next actions."""
-        llm = OllamaClient()
+        llm = UnifiedLLMClient()
         try:
             obs_summary = {
                 "endpoints": observations.get("endpoints", [])[:8],
@@ -293,10 +294,10 @@ class MCTSPlannerAgent(BaseAgent):
                     {"role": "system", "content": LATS_EXPANSION_SYSTEM},
                     {"role": "user", "content": prompt},
                 ],
-                task_type="classification",
-                max_tokens=1024,
+                task_type="llm_expand_actions",
+                max_tokens=4096,
             )
-            parsed = OllamaClient.extract_json(response)
+            parsed = extract_json_from_response(response)
             if isinstance(parsed, dict) and "actions" in parsed:
                 return parsed["actions"]
             return []
@@ -477,7 +478,7 @@ class MCTSPlannerAgent(BaseAgent):
             "endpoints": surface.get("endpoints", [])[:5],
         }
 
-        llm = OllamaClient()
+        llm = UnifiedLLMClient()
         try:
             response = await llm.chat(
                 messages=[
@@ -489,8 +490,8 @@ class MCTSPlannerAgent(BaseAgent):
                         "Prioritize and refine these investigations. Add any missing critical ones."
                     )},
                 ],
-                task_type="classification",
-                max_tokens=2048,
+                task_type="llm_plan",
+                max_tokens=4096,
             )
             return self._parse_response(response)
         except Exception as exc:
@@ -547,7 +548,7 @@ class MCTSPlannerAgent(BaseAgent):
 
     @staticmethod
     def _parse_response(response: str) -> dict:
-        result = OllamaClient.extract_json(response)
+        result = extract_json_from_response(response)
         if isinstance(result, dict):
             return result
         return {"investigations": [], "attack_hypotheses": []}

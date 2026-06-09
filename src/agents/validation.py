@@ -110,6 +110,8 @@ class ValidationAgent(BaseAgent):
             return await self._validate_sqli(finding, finding.get("url", target_url), client)
         elif any(kw in title_lower for kw in ("ssrf", "server-side request")):
             return await self._validate_ssrf(finding, finding.get("url", target_url), client)
+        elif any(kw in title_lower for kw in ("cmdi", "command injection", "command execution", "cwe-78", "os command")):
+            return await self._validate_cmdi(finding, finding.get("url", target_url), client)
         elif any(kw in title_lower for kw in ("redirect", "open redirect")):
             return await self._validate_redirect(finding, finding.get("url", target_url), client)
         elif any(kw in title_lower for kw in ("exposed", "sensitive", "directory", "path", "file", "info", "disclosure")):
@@ -210,11 +212,8 @@ class ValidationAgent(BaseAgent):
     async def _validate_ssrf(self, finding: dict, url: str, client: httpx.AsyncClient) -> dict:
         """Validate SSRF by testing internal URL injection and checking for metadata/leaked data."""
         try:
-            # SSRF means the SERVER made a request to an internal resource
-            # Just reaching a URL is NOT SSRF — test by injecting internal URLs as parameters
-            from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+            from urllib.parse import urlparse, urlunparse
             parsed = urlparse(url)
-            qs = parse_qs(parsed.query)
 
             # Get baseline response without SSRF params
             clean_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, "", parsed.fragment))
@@ -240,6 +239,76 @@ class ValidationAgent(BaseAgent):
             return {**finding, "exploit_verified": False, "verification_evidence": f"Status: {resp.status_code}"}
         except Exception as e:
             return {**finding, "exploit_verified": False, "verification_evidence": f"Validation error: {e}"}
+
+    async def _validate_cmdi(self, finding: dict, url: str, client: httpx.AsyncClient) -> dict:
+        """Validate command injection via echo-marker reflection + time-differential blind injection.
+
+        Strategy:
+        1. Inject a unique echo marker in a likely command parameter.
+        2. Re-fetch the URL with the marker — if reflected in body, exploit verified.
+        3. As fallback, test blind CMDI via time-differential (sleep N seconds).
+        """
+        import time
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+        try:
+            parsed = urlparse(url)
+            qs = parse_qs(parsed.query)
+            clean_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, "", parsed.fragment))
+
+            # 1. Echo-marker test on the first injectable parameter
+            if qs:
+                target_param = next(iter(qs.keys()))
+                marker = "assurix_cmdi_7193b2"
+                injected_qs = {**qs, target_param: [f"; echo {marker}"]}
+                injected_query = urlencode(injected_qs, doseq=True)
+                injected_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, injected_query, parsed.fragment))
+
+                resp = await client.get(injected_url, follow_redirects=False)
+                if resp.status_code == 200 and marker in resp.text:
+                    return {
+                        **finding,
+                        "exploit_verified": True,
+                        "verification_evidence": f"CMDI echo marker reflected in response body (param: {target_param})",
+                    }
+
+            # 2. Time-differential test (blind CMDI)
+            if qs:
+                target_param = next(iter(qs.keys()))
+                sleep_payload = "; sleep 2"
+                injected_qs = {**qs, target_param: [sleep_payload]}
+                injected_query = urlencode(injected_qs, doseq=True)
+                injected_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, injected_query, parsed.fragment))
+
+                baseline_start = time.monotonic()
+                try:
+                    await client.get(clean_url, follow_redirects=False, timeout=5.0)
+                except Exception:
+                    pass
+                baseline_elapsed = time.monotonic() - baseline_start
+
+                start = time.monotonic()
+                try:
+                    await client.get(injected_url, follow_redirects=False, timeout=8.0)
+                except Exception:
+                    pass
+                elapsed = time.monotonic() - start
+
+                # If injected request took ~2s longer than baseline, blind CMDI is confirmed
+                if elapsed - baseline_elapsed >= 1.5:
+                    return {
+                        **finding,
+                        "exploit_verified": True,
+                        "verification_evidence": f"CMDI blind confirmed via time-differential: {elapsed:.2f}s vs baseline {baseline_elapsed:.2f}s",
+                    }
+
+            return {
+                **finding,
+                "exploit_verified": False,
+                "verification_evidence": "CMDI marker not reflected and no time-differential detected",
+            }
+        except Exception as e:
+            return {**finding, "exploit_verified": False, "verification_evidence": f"CMDI validation error: {e}"}
 
     async def _validate_redirect(self, finding: dict, url: str, client: httpx.AsyncClient) -> dict:
         """Validate open redirect."""
@@ -287,8 +356,12 @@ class ValidationAgent(BaseAgent):
 
             resp = await client.get(url, follow_redirects=False)
             if resp.status_code == 200:
-                # SPA catch-all detection
-                if any(ind in resp.text.lower() for ind in ('<div id="root">', '<div id="app">', '<div id="__next"', '<div id="__nuxt"')):
+                has_query_params = bool(parsed.query)
+                # SPA catch-all detection — only when there are no injection params
+                if not has_query_params and any(
+                    ind in resp.text.lower()
+                    for ind in ('<div id="root">', '<div id="app">', '<div id="__next"', '<div id="__nuxt"')
+                ):
                     return {**finding, "exploit_verified": False, "verification_evidence": "SPA catch-all page"}
                 # Soft-404: if response is near-identical to baseline, it's a catch-all
                 if baseline and baseline.status_code == 200:

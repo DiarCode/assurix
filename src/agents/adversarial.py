@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Any
 
-from src.llm.client import OllamaClient
+from src.llm.frontier_client import UnifiedLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ class AdversarialValidator:
 
     async def validate_finding(self, finding: dict[str, Any], surface: dict) -> dict[str, Any]:
         """Run adversarial validation on a single finding."""
-        llm = OllamaClient()
+        llm = UnifiedLLMClient()
         try:
             finding_json = json.dumps(finding, default=str)[:1500]
             surface_json = json.dumps(

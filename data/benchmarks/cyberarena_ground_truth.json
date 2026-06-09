@@ -1,0 +1,593 @@
+{
+  "test_cases": [
+    {
+      "id": "dvwa-sqli-001",
+      "target_name": "dvwa",
+      "category": "sqli",
+      "endpoint": "/vulnerabilities/sqli/",
+      "parameter": "id",
+      "target_url": "http://localhost:80/vulnerabilities/sqli/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "SQL Injection in DVWA SQLi page",
+        "severity": "critical",
+        "cwe_id": "CWE-89",
+        "category": "sqli",
+        "endpoint": "/vulnerabilities/sqli/",
+        "parameter": "id"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-xss-r-001",
+      "target_name": "dvwa",
+      "category": "xss",
+      "endpoint": "/vulnerabilities/xss_r/",
+      "parameter": "name",
+      "target_url": "http://localhost:80/vulnerabilities/xss_r/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "Reflected XSS in DVWA XSS (Reflected) page",
+        "severity": "high",
+        "cwe_id": "CWE-79",
+        "category": "xss",
+        "endpoint": "/vulnerabilities/xss_r/",
+        "parameter": "name"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-xss-s-001",
+      "target_name": "dvwa",
+      "category": "xss",
+      "endpoint": "/vulnerabilities/xss_s/",
+      "parameter": "txtName, mtxMessage",
+      "target_url": "http://localhost:80/vulnerabilities/xss_s/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "Stored XSS in DVWA XSS (Stored) page",
+        "severity": "critical",
+        "cwe_id": "CWE-79",
+        "category": "xss",
+        "endpoint": "/vulnerabilities/xss_s/",
+        "parameter": "txtName, mtxMessage"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-cmdi-001",
+      "target_name": "dvwa",
+      "category": "cmdi",
+      "endpoint": "/vulnerabilities/exec/",
+      "parameter": "ip",
+      "target_url": "http://localhost:80/vulnerabilities/exec/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "OS Command Injection in DVWA Command Injection page",
+        "severity": "critical",
+        "cwe_id": "CWE-78",
+        "category": "cmdi",
+        "endpoint": "/vulnerabilities/exec/",
+        "parameter": "ip"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-lfi-001",
+      "target_name": "dvwa",
+      "category": "lfi",
+      "endpoint": "/vulnerabilities/fi/",
+      "parameter": "page",
+      "target_url": "http://localhost:80/vulnerabilities/fi/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "Local File Inclusion in DVWA File Inclusion page",
+        "severity": "high",
+        "cwe_id": "CWE-98",
+        "category": "lfi",
+        "endpoint": "/vulnerabilities/fi/",
+        "parameter": "page"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-csrf-001",
+      "target_name": "dvwa",
+      "category": "csrf",
+      "endpoint": "/vulnerabilities/csrf/",
+      "parameter": "password_new",
+      "target_url": "http://localhost:80/vulnerabilities/csrf/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "CSRF in DVWA CSRF page",
+        "severity": "medium",
+        "cwe_id": "CWE-352",
+        "category": "csrf",
+        "endpoint": "/vulnerabilities/csrf/",
+        "parameter": "password_new"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-upload-001",
+      "target_name": "dvwa",
+      "category": "upload",
+      "endpoint": "/vulnerabilities/upload/",
+      "parameter": "uploadedFile",
+      "target_url": "http://localhost:80/vulnerabilities/upload/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "Unrestricted File Upload in DVWA Upload page",
+        "severity": "high",
+        "cwe_id": "CWE-434",
+        "category": "upload",
+        "endpoint": "/vulnerabilities/upload/",
+        "parameter": "uploadedFile"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-brute-001",
+      "target_name": "dvwa",
+      "category": "brute_force",
+      "endpoint": "/vulnerabilities/brute/",
+      "parameter": "username, password",
+      "target_url": "http://localhost:80/vulnerabilities/brute/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "Brute Force (no lockout) in DVWA Brute Force page",
+        "severity": "medium",
+        "cwe_id": "CWE-307",
+        "category": "brute_force",
+        "endpoint": "/vulnerabilities/brute/",
+        "parameter": "username, password"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "dvwa-captcha-001",
+      "target_name": "dvwa",
+      "category": "brute_force",
+      "endpoint": "/vulnerabilities/captcha/",
+      "parameter": "username, password",
+      "target_url": "http://localhost:80/vulnerabilities/captcha/",
+      "setup_required": ["dvwa_auth", "dvwa_security_low"],
+      "expected_findings": [{
+        "title": "Weak CAPTCHA Bypass in DVWA CAPTCHA page",
+        "severity": "medium",
+        "cwe_id": "CWE-693",
+        "category": "brute_force",
+        "endpoint": "/vulnerabilities/captcha/",
+        "parameter": "username, password"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-sqli-001",
+      "target_name": "juice-shop",
+      "category": "sqli",
+      "endpoint": "/rest/products/search",
+      "parameter": "q",
+      "target_url": "http://localhost:3000/rest/products/search",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "SQL Injection (LIKE injection) in Juice Shop product search",
+        "severity": "high",
+        "cwe_id": "CWE-89",
+        "category": "sqli",
+        "endpoint": "/rest/products/search",
+        "parameter": "q"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-xss-search-001",
+      "target_name": "juice-shop",
+      "category": "xss",
+      "endpoint": "/rest/products/search",
+      "parameter": "q",
+      "target_url": "http://localhost:3000/rest/products/search",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Reflected XSS in Juice Shop product search",
+        "severity": "medium",
+        "cwe_id": "CWE-79",
+        "category": "xss",
+        "endpoint": "/rest/products/search",
+        "parameter": "q"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-idor-basket-001",
+      "target_name": "juice-shop",
+      "category": "idor",
+      "endpoint": "/api/BasketItems/{id}",
+      "parameter": "id",
+      "target_url": "http://localhost:3000/api/BasketItems/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "IDOR (other user's basket) in Juice Shop BasketItems API",
+        "severity": "high",
+        "cwe_id": "CWE-639",
+        "category": "idor",
+        "endpoint": "/api/BasketItems/{id}",
+        "parameter": "id"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-idor-review-001",
+      "target_name": "juice-shop",
+      "category": "idor",
+      "endpoint": "/api/Reviews/{id}",
+      "parameter": "id",
+      "target_url": "http://localhost:3000/api/Reviews/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "IDOR (product review manipulation) in Juice Shop Reviews API",
+        "severity": "medium",
+        "cwe_id": "CWE-639",
+        "category": "idor",
+        "endpoint": "/api/Reviews/{id}",
+        "parameter": "id"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-auth-bypass-001",
+      "target_name": "juice-shop",
+      "category": "auth_bypass",
+      "endpoint": "/rest/user/login",
+      "parameter": "email, password",
+      "target_url": "http://localhost:3000/rest/user/login",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Admin login bypass in Juice Shop login API",
+        "severity": "critical",
+        "cwe_id": "CWE-287",
+        "category": "auth_bypass",
+        "endpoint": "/rest/user/login",
+        "parameter": "email, password"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-csrf-001",
+      "target_name": "juice-shop",
+      "category": "csrf",
+      "endpoint": "/api/Users/",
+      "parameter": "POST body",
+      "target_url": "http://localhost:3000/api/Users/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "CSRF on profile change in Juice Shop Users API",
+        "severity": "medium",
+        "cwe_id": "CWE-352",
+        "category": "csrf",
+        "endpoint": "/api/Users/",
+        "parameter": "POST body"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-jwt-forge-001",
+      "target_name": "juice-shop",
+      "category": "jwt",
+      "endpoint": "/api/User/",
+      "parameter": "Authorization header",
+      "target_url": "http://localhost:3000/api/User/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "JWT Forge (none algorithm) in Juice Shop User API",
+        "severity": "critical",
+        "cwe_id": "CWE-327",
+        "category": "jwt",
+        "endpoint": "/api/User/",
+        "parameter": "Authorization header"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-path-trav-001",
+      "target_name": "juice-shop",
+      "category": "lfi",
+      "endpoint": "/ftp/",
+      "parameter": "path segments",
+      "target_url": "http://localhost:3000/ftp/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Path Traversal via poison null byte in Juice Shop FTP endpoint",
+        "severity": "high",
+        "cwe_id": "CWE-22",
+        "category": "lfi",
+        "endpoint": "/ftp/",
+        "parameter": "path segments"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-info-disc-001",
+      "target_name": "juice-shop",
+      "category": "info_disclosure",
+      "endpoint": "/ftp/coupons_2013.md.bak",
+      "parameter": "",
+      "target_url": "http://localhost:3000/ftp/coupons_2013.md.bak",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Information Disclosure via exposed backup file in Juice Shop",
+        "severity": "medium",
+        "cwe_id": "CWE-200",
+        "category": "info_disclosure",
+        "endpoint": "/ftp/coupons_2013.md.bak",
+        "parameter": ""
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-info-disc-002",
+      "target_name": "juice-shop",
+      "category": "info_disclosure",
+      "endpoint": "/.well-known/security.txt",
+      "parameter": "",
+      "target_url": "http://localhost:3000/.well-known/security.txt",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Security.txt Disclosure in Juice Shop",
+        "severity": "low",
+        "cwe_id": "CWE-200",
+        "category": "info_disclosure",
+        "endpoint": "/.well-known/security.txt",
+        "parameter": ""
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-misconfig-001",
+      "target_name": "juice-shop",
+      "category": "auth_bypass",
+      "endpoint": "/encryptionkeys/",
+      "parameter": "",
+      "target_url": "http://localhost:3000/encryptionkeys/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Missing Authentication on Admin API (encryptionkeys) in Juice Shop",
+        "severity": "high",
+        "cwe_id": "CWE-306",
+        "category": "auth_bypass",
+        "endpoint": "/encryptionkeys/",
+        "parameter": ""
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "js-2fa-bypass-001",
+      "target_name": "juice-shop",
+      "category": "auth_bypass",
+      "endpoint": "/rest/2fa/",
+      "parameter": "setupToken",
+      "target_url": "http://localhost:3000/rest/2fa/",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "2FA Bypass in Juice Shop 2FA API",
+        "severity": "high",
+        "cwe_id": "CWE-287",
+        "category": "auth_bypass",
+        "endpoint": "/rest/2fa/",
+        "parameter": "setupToken"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-sqli-001",
+      "target_name": "webgoat",
+      "category": "sqli",
+      "endpoint": "/WebGoat/SqlInjection/attack",
+      "parameter": "query",
+      "target_url": "http://localhost:8080/WebGoat/SqlInjection/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "SQL Injection in WebGoat SQL Injection challenge",
+        "severity": "critical",
+        "cwe_id": "CWE-89",
+        "category": "sqli",
+        "endpoint": "/WebGoat/SqlInjection/attack",
+        "parameter": "query"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-xss-001",
+      "target_name": "webgoat",
+      "category": "xss",
+      "endpoint": "/WebGoat/CrossSiteScripting/attack",
+      "parameter": "QTY1",
+      "target_url": "http://localhost:8080/WebGoat/CrossSiteScripting/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Reflected XSS in WebGoat Cross-Site Scripting challenge",
+        "severity": "high",
+        "cwe_id": "CWE-79",
+        "category": "xss",
+        "endpoint": "/WebGoat/CrossSiteScripting/attack",
+        "parameter": "QTY1"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-cmdi-001",
+      "target_name": "webgoat",
+      "category": "cmdi",
+      "endpoint": "/WebGoat/CommandInjection/attack",
+      "parameter": "ip",
+      "target_url": "http://localhost:8080/WebGoat/CommandInjection/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "OS Command Injection in WebGoat Command Injection challenge",
+        "severity": "critical",
+        "cwe_id": "CWE-78",
+        "category": "cmdi",
+        "endpoint": "/WebGoat/CommandInjection/attack",
+        "parameter": "ip"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-path-trav-001",
+      "target_name": "webgoat",
+      "category": "lfi",
+      "endpoint": "/WebGoat/PathTraversal/attack",
+      "parameter": "file",
+      "target_url": "http://localhost:8080/WebGoat/PathTraversal/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Path Traversal in WebGoat Path Traversal challenge",
+        "severity": "high",
+        "cwe_id": "CWE-22",
+        "category": "lfi",
+        "endpoint": "/WebGoat/PathTraversal/attack",
+        "parameter": "file"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-auth-bypass-001",
+      "target_name": "webgoat",
+      "category": "auth_bypass",
+      "endpoint": "/WebGoat/HttpProxies/attack",
+      "parameter": "",
+      "target_url": "http://localhost:8080/WebGoat/HttpProxies/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Authentication Bypass in WebGoat HTTP Proxies challenge",
+        "severity": "high",
+        "cwe_id": "CWE-287",
+        "category": "auth_bypass",
+        "endpoint": "/WebGoat/HttpProxies/attack",
+        "parameter": ""
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-idor-001",
+      "target_name": "webgoat",
+      "category": "idor",
+      "endpoint": "/WebGoat/IDOR/attack",
+      "parameter": "id",
+      "target_url": "http://localhost:8080/WebGoat/IDOR/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "IDOR in WebGoat IDOR challenge",
+        "severity": "high",
+        "cwe_id": "CWE-639",
+        "category": "idor",
+        "endpoint": "/WebGoat/IDOR/attack",
+        "parameter": "id"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-ssrf-001",
+      "target_name": "webgoat",
+      "category": "ssrf",
+      "endpoint": "/WebGoat/SSRF/attack",
+      "parameter": "url",
+      "target_url": "http://localhost:8080/WebGoat/SSRF/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "SSRF in WebGoat SSRF challenge",
+        "severity": "high",
+        "cwe_id": "CWE-918",
+        "category": "ssrf",
+        "endpoint": "/WebGoat/SSRF/attack",
+        "parameter": "url"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-jwt-001",
+      "target_name": "webgoat",
+      "category": "jwt",
+      "endpoint": "/WebGoat/JWT/attack",
+      "parameter": "token",
+      "target_url": "http://localhost:8080/WebGoat/JWT/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "JWT Weak Secret in WebGoat JWT challenge",
+        "severity": "high",
+        "cwe_id": "CWE-327",
+        "category": "jwt",
+        "endpoint": "/WebGoat/JWT/attack",
+        "parameter": "token"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-csrf-001",
+      "target_name": "webgoat",
+      "category": "csrf",
+      "endpoint": "/WebGoat/CSRF/attack",
+      "parameter": "POST body",
+      "target_url": "http://localhost:8080/WebGoat/CSRF/attack",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "CSRF in WebGoat CSRF challenge",
+        "severity": "medium",
+        "cwe_id": "CWE-352",
+        "category": "csrf",
+        "endpoint": "/WebGoat/CSRF/attack",
+        "parameter": "POST body"
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "wg-info-disc-001",
+      "target_name": "webgoat",
+      "category": "info_disclosure",
+      "endpoint": "/WebGoat/challenge/1",
+      "parameter": "",
+      "target_url": "http://localhost:8080/WebGoat/challenge/1",
+      "setup_required": [],
+      "expected_findings": [{
+        "title": "Information Disclosure via Error in WebGoat challenge 1",
+        "severity": "medium",
+        "cwe_id": "CWE-209",
+        "category": "info_disclosure",
+        "endpoint": "/WebGoat/challenge/1",
+        "parameter": ""
+      }],
+      "expected_safe": false,
+      "timeout_seconds": 120
+    }
+  ]
+}

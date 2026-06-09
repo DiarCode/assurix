@@ -472,7 +472,8 @@ def test_pentester_has_update_hypotheses():
     assert hasattr(agent, '_update_hypotheses') and callable(agent._update_hypotheses)
 
 
-def test_bayesian_hypothesis_seeding():
+@pytest.mark.asyncio
+async def test_bayesian_hypothesis_seeding():
     from src.agents.browser.memory import FindingMemory
     from pathlib import Path
     import tempfile
@@ -480,7 +481,7 @@ def test_bayesian_hypothesis_seeding():
         memory = FindingMemory("test", Path(tmpdir))
         from src.agents.pentester import PentesterAgent
         agent = PentesterAgent()
-        agent._seed_hypotheses(memory, {"technologies": ["php", "mysql"], "auth_pages": ["/login"], "endpoints": ["/api/users/1"]}, "http://target.com")
+        await agent._seed_hypotheses(memory, {"technologies": ["php", "mysql"], "auth_pages": ["/login"], "endpoints": ["/api/users/1"]}, "http://target.com")
         active = memory.get_active_hypotheses()
         bayesian = [h for h in active if "posterior" in h]
         assert len(bayesian) >= 4  # xss, sqli, auth, idor at minimum

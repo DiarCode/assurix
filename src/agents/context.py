@@ -29,6 +29,7 @@ class ContextManager:
         self._compacted_summary: str = ""
         self._confirmed_findings: list[dict[str, Any]] = []
         self._failed_attempts: list[dict[str, Any]] = []
+        self._semantic_compact_pending: bool = False
 
     def add_observation(self, observation: dict[str, Any]) -> None:
         """Add a new observation to the sliding window."""
@@ -89,7 +90,12 @@ class ContextManager:
         return list(self._failed_attempts)
 
     def _maybe_compact(self) -> None:
-        """Compact older observations when window overflows."""
+        """Compact older observations when window overflows.
+
+        Performs basic string-based compaction immediately and sets
+        a flag requesting semantic compaction when an LLM client
+        becomes available.
+        """
         if len(self._observations) <= self.window_size:
             return
 
@@ -105,6 +111,9 @@ class ContextManager:
         # Keep compacted summary bounded
         if len(self._compacted_summary) > 4000:
             self._compacted_summary = self._compacted_summary[-3000:]
+
+        # Signal that semantic compaction would improve the summary
+        self._semantic_compact_pending = True
 
     @staticmethod
     def _compact_observations(observations: list[dict[str, Any]]) -> str:
@@ -122,25 +131,102 @@ class ContextManager:
         if not self._compacted_summary:
             return
         try:
-            from src.llm.client import OllamaClient
+            from src.llm.frontier_client import UnifiedLLMClient
 
-            if not isinstance(llm_client, OllamaClient):
-                llm_client = OllamaClient()
+            if not isinstance(llm_client, UnifiedLLMClient):
+                llm_client = UnifiedLLMClient()
             response = await llm_client.chat(
                 messages=[
                     {
                         "role": "system",
                         "content": "Summarize these security observations concisely, preserving key findings and URLs.",
                     },
-                    {"role": "user", "content": self._compacted_summary[:3000]},
+                    {"role": "user", "content": self._compacted_summary[:6000]},
                 ],
-                task_type="classification",
-                max_tokens=512,
+                task_type="context_compaction",
+                max_tokens=2048,
             )
             if response and len(response) < len(self._compacted_summary):
                 self._compacted_summary = response
         except Exception as exc:
             logger.warning("LLM compaction failed, keeping rule-based summary: %s", exc)
+
+    async def semantic_compact(self, llm_client: Any) -> None:
+        """Use LLM to generate a structured security summary preserving critical context.
+
+        Unlike basic llm_compact which just shortens text, semantic_compact
+        preserves the structure and semantics of security findings, active
+        hypotheses, failed attempts, and target technology profiles.
+        Uses task_type='context_compaction' with max_tokens=2048.
+        """
+        if not self._compacted_summary and not self._confirmed_findings and not self._failed_attempts:
+            return
+
+        try:
+            from src.llm.frontier_client import UnifiedLLMClient
+
+            if not isinstance(llm_client, UnifiedLLMClient):
+                llm_client = UnifiedLLMClient()
+
+            # Build structured context sections for the LLM
+            findings_section = "No confirmed findings yet."
+            if self._confirmed_findings:
+                finding_lines = [
+                    f"- [{f.get('severity', '?')}] {f.get('title', 'unknown')}: "
+                    f"{f.get('evidence', '')[:150]} (CWE: {f.get('cwe_id', 'N/A')})"
+                    for f in self._confirmed_findings[:10]
+                ]
+                findings_section = "\n".join(finding_lines)
+
+            failed_section = "No failed attempts recorded."
+            if self._failed_attempts:
+                failed_lines = [
+                    f"- {f['action']} on {f['url']}: {f.get('reason', 'failed')}"
+                    for f in self._failed_attempts[-10:]
+                ]
+                failed_section = "\n".join(failed_lines)
+
+            prior_section = self._compacted_summary[:3000] if self._compacted_summary else "No prior context."
+
+            prompt = (
+                "Generate a structured security assessment summary from the following data.\n"
+                "Preserve these categories:\n"
+                "## Active Attack Hypotheses\n"
+                "## Confirmed Vulnerabilities\n"
+                "## Failed Attempts (do not repeat)\n"
+                "## Target Technology Profile\n\n"
+                f"### Confirmed Findings:\n{findings_section}\n\n"
+                f"### Failed Attempts:\n{failed_section}\n\n"
+                f"### Prior Compacted Context:\n{prior_section}"
+            )
+
+            response = await llm_client.chat(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a security assessment summarizer. Preserve all vulnerability "
+                            "details, attack hypotheses, and technology fingerprints. Remove "
+                            "redundant observations but keep every confirmed finding and "
+                            "failed attempt pattern."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                task_type="context_compaction",
+                max_tokens=2048,
+            )
+
+            if response and len(response) < len(self._compacted_summary):
+                self._compacted_summary = response
+                self._semantic_compact_pending = False
+        except Exception as exc:
+            logger.warning("Semantic compaction failed, keeping existing summary: %s", exc)
+
+    @property
+    def needs_semantic_compact(self) -> bool:
+        """Whether semantic compaction is pending and would be beneficial."""
+        return self._semantic_compact_pending
 
     def reset(self) -> None:
         """Clear all context state."""
@@ -148,6 +234,7 @@ class ContextManager:
         self._compacted_summary = ""
         self._confirmed_findings.clear()
         self._failed_attempts.clear()
+        self._semantic_compact_pending = False
 
     @property
     def observation_count(self) -> int:

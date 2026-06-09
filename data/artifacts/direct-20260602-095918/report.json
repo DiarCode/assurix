@@ -1,0 +1,263 @@
+{
+  "engagement_id": "direct-20260602-095918",
+  "target_url": "https://admin.arboard.kz",
+  "status": "completed",
+  "elapsed_seconds": 958.7,
+  "findings": [
+    {
+      "title": "Missing x-frame-options header",
+      "description": "Missing X-Frame-Options — clickjacking possible",
+      "severity": "medium",
+      "owasp_category": "A05:2021",
+      "cwe_id": "CWE-693",
+      "confidence_score": 0.9,
+      "evidence": {
+        "missing_header": "x-frame-options"
+      },
+      "source_agent": "webapp"
+    },
+    {
+      "title": "Missing x-content-type-options header",
+      "description": "Missing X-Content-Type-Options — MIME sniffing",
+      "severity": "low",
+      "owasp_category": "A05:2021",
+      "cwe_id": null,
+      "confidence_score": 0.9,
+      "evidence": {
+        "missing_header": "x-content-type-options"
+      },
+      "source_agent": "webapp"
+    },
+    {
+      "title": "Missing referrer-policy header",
+      "description": "Missing Referrer-Policy — URL leaks in Referer",
+      "severity": "low",
+      "owasp_category": "A05:2021",
+      "cwe_id": null,
+      "confidence_score": 0.9,
+      "evidence": {
+        "missing_header": "referrer-policy"
+      },
+      "source_agent": "webapp"
+    },
+    {
+      "title": "Missing permissions-policy header",
+      "description": "Missing Permissions-Policy — browser features unrestricted",
+      "severity": "info",
+      "owasp_category": "A05:2021",
+      "cwe_id": null,
+      "confidence_score": 0.9,
+      "evidence": {
+        "missing_header": "permissions-policy"
+      },
+      "source_agent": "webapp"
+    },
+    {
+      "title": "Missing HSTS header",
+      "description": "No Strict-Transport-Security — browsers may access via HTTP",
+      "severity": "medium",
+      "owasp_category": "A02:2021",
+      "cwe_id": "CWE-319",
+      "confidence_score": 0.95,
+      "evidence": {
+        "missing_header": "strict-transport-security"
+      },
+      "source_agent": "webapp"
+    },
+    {
+      "title": "Missing Content-Security-Policy header",
+      "description": "No CSP — no protection against XSS and content injection",
+      "severity": "high",
+      "owasp_category": "A05:2021",
+      "cwe_id": "CWE-693",
+      "confidence_score": 0.95,
+      "evidence": {
+        "missing_header": "content-security-policy"
+      },
+      "source_agent": "webapp"
+    },
+    {
+      "title": "Missing Content-Security-Policy (CSP)",
+      "missing_control": "Content-Security-Policy (CSP)",
+      "expected_location": "HTTP Response Headers",
+      "severity": "high",
+      "cwe": "CWE-693",
+      "evidence": "The browser observation explicitly states 'Missing Content-Security-Policy header', leaving the application vulnerable to XSS and content injection.",
+      "source_agent": "missing_code_llm",
+      "confidence_score": 0.5
+    },
+    {
+      "title": "Missing Strict-Transport-Security (HSTS)",
+      "missing_control": "Strict-Transport-Security (HSTS)",
+      "expected_location": "HTTP Response Headers",
+      "severity": "medium",
+      "cwe": "CWE-319",
+      "evidence": "The browser observation reports 'Missing HSTS header', meaning browsers may access the site via insecure HTTP.",
+      "source_agent": "missing_code_llm",
+      "confidence_score": 0.5
+    },
+    {
+      "title": "Missing X-Frame-Options",
+      "missing_control": "X-Frame-Options",
+      "expected_location": "HTTP Response Headers",
+      "severity": "medium",
+      "cwe": "CWE-693",
+      "evidence": "The browser observation reports 'Missing x-frame-options header', which makes the application susceptible to clickjacking attacks.",
+      "source_agent": "missing_code_llm",
+      "confidence_score": 0.5
+    },
+    {
+      "title": "Missing X-Content-Type-Options",
+      "missing_control": "X-Content-Type-Options",
+      "expected_location": "HTTP Response Headers",
+      "severity": "low",
+      "cwe": "CWE-1162",
+      "evidence": "The browser observation reports 'Missing x-content-type-options header', allowing the browser to perform MIME sniffing.",
+      "source_agent": "missing_code_llm",
+      "confidence_score": 0.5
+    },
+    {
+      "title": "Missing Referrer-Policy",
+      "missing_control": "Referrer-Policy",
+      "expected_location": "HTTP Response Headers",
+      "severity": "low",
+      "cwe": "CWE-200",
+      "evidence": "The browser observation reports 'Missing referrer-policy header', which can lead to sensitive URL information leaking in the Referer header.",
+      "source_agent": "missing_code_llm",
+      "confidence_score": 0.5
+    },
+    {
+      "title": "Missing Permissions-Policy",
+      "missing_control": "Permissions-Policy",
+      "expected_location": "HTTP Response Headers",
+      "severity": "low",
+      "cwe": "CWE-693",
+      "evidence": "The browser observation reports 'Missing permissions-policy header', leaving browser feature access unrestricted.",
+      "source_agent": "missing_code_llm",
+      "confidence_score": 0.5
+    }
+  ],
+  "capability_scores": [
+    {
+      "finding_type": "Missing x-frame-options header",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.9,
+      "evidence": "x-frame-options"
+    },
+    {
+      "finding_type": "Missing x-content-type-options header",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.9,
+      "evidence": "x-content-type-options"
+    },
+    {
+      "finding_type": "Missing referrer-policy header",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.9,
+      "evidence": "referrer-policy"
+    },
+    {
+      "finding_type": "Missing permissions-policy header",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.9,
+      "evidence": "permissions-policy"
+    },
+    {
+      "finding_type": "Missing HSTS header",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.95,
+      "evidence": "strict-transport-security"
+    },
+    {
+      "finding_type": "Missing Content-Security-Policy header",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.95,
+      "evidence": "content-security-policy"
+    },
+    {
+      "finding_type": "Missing Content-Security-Policy (CSP)",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.5,
+      "evidence": "The browser observation explicitly states 'Missing Content-Security-Policy header', leaving the application vulnerable to XSS and content injection."
+    },
+    {
+      "finding_type": "Missing Strict-Transport-Security (HSTS)",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.5,
+      "evidence": "The browser observation reports 'Missing HSTS header', meaning browsers may access the site via insecure HTTP."
+    },
+    {
+      "finding_type": "Missing X-Frame-Options",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.5,
+      "evidence": "The browser observation reports 'Missing x-frame-options header', which makes the application susceptible to clickjacking attacks."
+    },
+    {
+      "finding_type": "Missing X-Content-Type-Options",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.5,
+      "evidence": "The browser observation reports 'Missing x-content-type-options header', allowing the browser to perform MIME sniffing."
+    },
+    {
+      "finding_type": "Missing Referrer-Policy",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.5,
+      "evidence": "The browser observation reports 'Missing referrer-policy header', which can lead to sensitive URL information leaking in the Referer header."
+    },
+    {
+      "finding_type": "Missing Permissions-Policy",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection",
+      "confidence": 0.5,
+      "evidence": "The browser observation reports 'Missing permissions-policy header', leaving browser feature access unrestricted."
+    }
+  ],
+  "severity_counts": {
+    "critical": 0,
+    "high": 2,
+    "medium": 4,
+    "low": 5,
+    "info": 1
+  },
+  "risk_rating": "high",
+  "surface": {},
+  "total_findings": 12,
+  "scan_log": [
+    {
+      "phase": "webapp",
+      "findings": 12,
+      "tests_run": 14
+    },
+    {
+      "phase": "pentester",
+      "findings": 0
+    },
+    {
+      "phase": "validation",
+      "findings": 12
+    }
+  ]
+}

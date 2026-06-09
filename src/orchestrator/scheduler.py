@@ -100,9 +100,19 @@ class JobScheduler:
                 )
             await session.flush()
 
-    async def load_pending(self, session: AsyncSession) -> None:
-        """Hydrate the in-memory queue from SQLite on startup."""
+    async def load_pending(self, session: AsyncSession, engagement_id: str | None = None) -> None:
+        """Hydrate the in-memory queue from SQLite on startup.
+
+        Args:
+            session: DB session.
+            engagement_id: If provided, only load jobs for this engagement.
+                This is the safe default for production scans — without it,
+                stale jobs from prior scans would be re-queued and the engine
+                would attempt to process them in the wrong context.
+        """
         stmt = select(Job).where(Job.status.in_([JobStatus.QUEUED, JobStatus.RETRYING]))
+        if engagement_id is not None:
+            stmt = stmt.where(Job.engagement_id == engagement_id)
         result = await session.execute(stmt)
         for job in result.scalars().all():
             await self._queue.put(

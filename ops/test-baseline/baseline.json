@@ -1,0 +1,51 @@
+{
+  "captured_at": "2026-06-03",
+  "schema_version": 1,
+  "purpose": "Test baseline for the Assurix v2 architecture migration (per plan §6.4). The Day-1 punch-list MUST land this baseline before any Week 1 acceptance criteria are evaluated. The test_baseline_gate enforces: zero NEW failures, known flakes reproduce, flake-now-passing is NOT a regression.",
+  "test_command": "python -m pytest --junitxml=ops/test-baseline/baseline-2026-06-03.xml tests/",
+  "baseline_junit_path": "ops/test-baseline/baseline-2026-06-03.xml",
+  "expected_results": {
+    "total": 752,
+    "passed": 748,
+    "failed": 3,
+    "skipped": 1,
+    "xfailed": 0,
+    "xpassed": 0,
+    "errors": 0,
+    "captured_at": "2026-06-03"
+  },
+  "known_flakes": [
+    {
+      "nodeid": "tests/unit/test_validation_fixes.py::test_horizon_xss_payload_rotation",
+      "reason": "Pre-existing flake — nondeterministic order of payload mutation",
+      "tickets": ["#INTERNAL-flawed-test-2026-05-19"]
+    },
+    {
+      "nodeid": "tests/unit/test_validation_fixes.py::test_business_logic_timing_window",
+      "reason": "Pre-existing flake — wall-clock dependent (sensitive to CI load)",
+      "tickets": ["#INTERNAL-flawed-test-2026-05-19"]
+    },
+    {
+      "nodeid": "tests/integration/test_hptsa_research_loop.py::test_orchestrator_endtoend",
+      "reason": "Pre-existing flake — async gather cancellation under load",
+      "tickets": ["#INTERNAL-flawed-test-2026-05-19"]
+    }
+  ],
+  "known_failures": [
+    {
+      "nodeid": "tests/test_benchmark.py::TestGroundTruthLoading::test_ground_truth_has_safe_cases[cyberarena]",
+      "reason": "Pre-existing failure — ground truth JSON missing safe cases for cyberarena",
+      "tickets": ["#INTERNAL-bench-data-2026-05-19"]
+    },
+    {
+      "nodeid": "tests/unit/test_reflection.py::TestNewHypothesisGeneration::test_returns_new_hypotheses_when_gaps_identified",
+      "reason": "Pre-existing failure — reflection hypothesis shape mismatch",
+      "tickets": ["#INTERNAL-reflection-2026-05-19"]
+    },
+    {
+      "nodeid": "tests/unit/test_reflection.py::TestNewHypothesisGeneration::test_validates_new_hypotheses",
+      "reason": "Pre-existing failure — reflection validation shape mismatch",
+      "tickets": ["#INTERNAL-reflection-2026-05-19"]
+    }
+  ]
+}

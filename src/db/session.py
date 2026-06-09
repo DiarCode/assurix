@@ -19,10 +19,19 @@ def _get_engine():
     global _engine
     if _engine is None:
         settings = get_settings()
+        # pool_size: number of permanent connections kept open. The engine's
+        # _run_loop holds a long-lived session across an agent's LLM call
+        # (potentially 30+ seconds for ollama.com), and the CLI's polling loop
+        # opens a fresh session every 5s. Default pool size (5) is technically
+        # enough but in practice aiosqlite + WAL can serialize connections
+        # when they overlap, leading to deadlocks. Bump to 10 to be safe.
         _engine = create_async_engine(
             settings.database_url,
             echo=settings.log_level == "DEBUG",
             pool_pre_ping=True,
+            pool_size=10,
+            max_overflow=10,
+            pool_timeout=30,
         )
     return _engine
 

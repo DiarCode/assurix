@@ -33,6 +33,17 @@ class BenchmarkRun(Base):
     weighted_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     pass_at_k_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     k_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # BountyBench phase scores — populated by phase_scorer when the
+    # suite is "bountybench".  See src/benchmark/phase_scorer.py.
+    bountybench_detect_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bountybench_exploit_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bountybench_patch_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bountybench_all_phases_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bountybench_phase_detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # CyberGym PoC scoring — populated by phase_scorer when the suite is
+    # "cybergym".
+    cybergym_poc_pass_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cybergym_poc_detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     results: Mapped[list["BenchmarkResult"]] = relationship(
         "BenchmarkResult", back_populates="run", cascade="all, delete-orphan",

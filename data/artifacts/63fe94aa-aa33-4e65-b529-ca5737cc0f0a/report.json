@@ -1,0 +1,262 @@
+{
+  "report_type": "assurix_security_assessment",
+  "version": "2.0",
+  "engagement": {
+    "id": "63fe94aa-aa33-4e65-b529-ca5737cc0f0a",
+    "status": "completed",
+    "started_at": "2026-06-01T15:38:07.084763",
+    "completed_at": "2026-06-01T16:02:28.005165",
+    "iteration_count": 1,
+    "config": {
+      "max_iterations": 2,
+      "mode": "offensive"
+    }
+  },
+  "summary": {
+    "total_findings": 13,
+    "confirmed_findings": 10,
+    "informational_findings": 1,
+    "severity_distribution": {
+      "critical": 0,
+      "high": 3,
+      "medium": 7,
+      "low": 2,
+      "info": 1
+    },
+    "total_hypotheses": 0,
+    "attack_paths_identified": 0,
+    "risk_level": "critical"
+  },
+  "findings": [
+    {
+      "id": "f22164e8-e10e-48c1-bdd4-17c1bb3b56f7",
+      "title": "Login form submits credentials via GET method",
+      "description": "The login form at https://admin.arboard.kz uses the HTTP GET method to submit username and password. This exposes credentials in the URL, which can be logged by proxies, browser history, and server logs, and may be visible in the address bar.",
+      "severity": "high",
+      "confidence_score": 0.9,
+      "validated": true,
+      "cwe_id": "CWE-319",
+      "owasp_category": "A2:2021 \u2013 Cryptographic Failures",
+      "remediation": "Change form method to POST. Use HTTPS (already implied) and ensure credentials are never transmitted in the URL. Example: <form method=\"post\" action=\"/login\">",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:46:25.872761",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "a8702b86-811f-4c05-a3c7-6ee0c3088493",
+      "title": "Missing CAPTCHA or rate limiting on login form",
+      "description": "The login form does not include a CAPTCHA or any visible rate limiting mechanism. This allows automated brute-force attacks against the admin login.",
+      "severity": "medium",
+      "confidence_score": 0.8,
+      "validated": true,
+      "cwe_id": "CWE-307",
+      "owasp_category": "A4:2021 \u2013 Insecure Design",
+      "remediation": "Implement CAPTCHA (e.g., reCAPTCHA v3) after a configurable number of failed attempts. Additionally, enforce account lockout after N failed attempts and implement IP-based rate limiting.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:46:25.874532",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "bfba8ffa-364d-4e18-904d-37d8ca5b8da3",
+      "title": "Missing Multi-Factor Authentication (MFA) for admin login",
+      "description": "The admin login page does not require any second factor for authentication (no 2FA buttons or prompts).",
+      "severity": "medium",
+      "confidence_score": 0.8,
+      "validated": true,
+      "cwe_id": "CWE-308",
+      "owasp_category": "A4:2021 \u2013 Insecure Design",
+      "remediation": "Implement MFA using TOTP, SMS, or push notifications. Enforce it for all admin accounts.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:46:25.875748",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "dc9887dd-cfab-445f-b06e-a85d085d2711",
+      "title": "Directory listing enabled on /assets/ path",
+      "description": "Accessing https://admin.arboard.kz/assets redirects or shows directory contents. While the current evidence only shows a redirect (302), the presence of a redirect often indicates directory listing is enabled (e.g., nginx with autoindex on or a trailing slash redirect). This may expose static assets and potentially configuration files.",
+      "severity": "low",
+      "confidence_score": 0.4,
+      "validated": false,
+      "cwe_id": "CWE-548",
+      "owasp_category": "A5:2021 \u2013 Security Misconfiguration",
+      "remediation": "Disable directory listing in nginx (add 'autoindex off;'). Ensure no sensitive files are placed in the public web directory.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:46:25.876827"
+    },
+    {
+      "id": "94177423-e6b9-49bd-ac21-8ba9edbff40f",
+      "title": "Login form uses GET method \u2013 business logic flaw",
+      "description": "Submitting credentials via GET violates standard security practices and exposes sensitive data in URLs. This is a business logic design flaw that increases attack surface beyond technical misconfiguration.",
+      "severity": "medium",
+      "confidence_score": 1.0,
+      "validated": true,
+      "cwe_id": "CWE-840",
+      "owasp_category": "A04:2021",
+      "remediation": "Change form method to POST. Additionally, implement CSRF tokens and use HTTPS. Review any logs that may have stored previous GET-based credentials.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:46:25.877875",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "aab1e82a-a34f-4d78-9c25-e5270d52cce6",
+      "title": "No brute-force protection on login",
+      "description": "The absence of CAPTCHA or account lockout allows unlimited login attempts, making brute-force and credential stuffing attacks viable.",
+      "severity": "medium",
+      "confidence_score": 0.8,
+      "validated": true,
+      "cwe_id": "CWE-840",
+      "owasp_category": "A04:2021",
+      "remediation": "Implement account lockout after 5 failed attempts (temporary 30-min lock), add reCAPTCHA after 3 failures, and enforce strong password policies. Consider security headers like 'X-RateLimit-Remaining'.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:46:25.878905",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "046b45b4-2ebc-4a9e-b08b-a8059f9646ea",
+      "title": "Login form uses HTTP GET method \u2013 credentials exposed in URL and server logs",
+      "description": "The login form at /login?from=%2F uses method='get', so username and password are submitted as query parameters. This causes credentials to be visible in URLs, browser history, referrer headers, and server logs. It also allows easy interception in shared networks and violates secure authentication best practices.",
+      "severity": "high",
+      "confidence_score": 1.0,
+      "validated": true,
+      "cwe_id": "CWE-319",
+      "owasp_category": "A02:2021 \u2013 Cryptographic Failures",
+      "remediation": "Change the form method to 'post'. Ensure all sensitive data (username, password) is transmitted in the request body over HTTPS. Implement CSRF protection and use secure session cookies. Example: <form method='post' action='/login'> with input fields inside the body.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.309252",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "e69a43e3-f9e5-4eba-8df0-f69c77bb7156",
+      "title": "No captcha or brute-force protection on login form",
+      "description": "The login form lacks any captcha, rate limiting, or account lockout mechanism. The 'hasCaptcha' field is false, and no additional security controls are present in the form.",
+      "severity": "medium",
+      "confidence_score": 0.8,
+      "validated": true,
+      "cwe_id": "CWE-307",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "remediation": "Implement rate limiting (e.g., 5 attempts per IP per minute), account lockout after 3-5 failed attempts, and optionally add a captcha (e.g., reCAPTCHA) to the login form. Also enforce strong password policies.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.310601",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "e8f9d842-7e83-4cbb-ae28-83f64502efa7",
+      "title": "Absence of multi-factor authentication (2FA) on admin login",
+      "description": "The login form does not offer or require two-factor authentication (2FA). The 'has2FA' field is false. Admin accounts are protected only by a single password.",
+      "severity": "medium",
+      "confidence_score": 0.9,
+      "validated": true,
+      "cwe_id": "CWE-308",
+      "owasp_category": "A07:2021 \u2013 Identification and Authentication Failures",
+      "remediation": "Implement 2FA (e.g., TOTP via authenticator app, SMS, or hardware token) for all admin accounts. Enforce it for high-privilege accounts.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.311753",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "e56a1b2e-f608-4c49-9603-761f11a548aa",
+      "title": "Redirect at /assets exposes directory listing or information",
+      "description": "The URL /assets redirects to http://admin.arboard.kz/assets/ (trailing slash). This could expose the content of the assets directory if directory listing is enabled on nginx.",
+      "severity": "low",
+      "confidence_score": 0.3,
+      "validated": false,
+      "cwe_id": "CWE-200",
+      "owasp_category": "A05:2021 \u2013 Security Misconfiguration",
+      "remediation": "Configure nginx to deny access to directory listing (autoindex off). Also ensure sensitive files (e.g., .env, configs) are not placed in assets. Example nginx: location /assets/ { autoindex off; }",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.312601"
+    },
+    {
+      "id": "95c027c8-d86a-4c7b-8168-e4d6a204fedb",
+      "title": "Login form sends credentials via GET \u2013 credentials visible in URL and logs",
+      "description": "The authentication flow uses a GET request, meaning the password is transmitted as a query parameter. This violates basic security principles and exposes credentials to third parties through browser history, web server logs, proxy logs, and referrer headers. Additionally, this makes it trivial for an attacker to extract credentials via log inspection.",
+      "severity": "high",
+      "confidence_score": 0.9,
+      "validated": true,
+      "cwe_id": "CWE-840",
+      "owasp_category": "A04:2021",
+      "remediation": "Change form method to POST. Implement password hashing and secure session handling. Use HTTPS exclusively. Ensure all logs are sanitized of sensitive parameters.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.313459",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "9616d241-eb8c-4742-89d5-9cdd8923292a",
+      "title": "No account lockout or rate limiting \u2013 unlimited brute force possible",
+      "description": "The login endpoint has no mechanism to detect or prevent repeated failed attempts. An attacker can automate password guessing without any restriction.",
+      "severity": "medium",
+      "confidence_score": 0.8,
+      "validated": true,
+      "cwe_id": "CWE-840",
+      "owasp_category": "A04:2021",
+      "remediation": "Implement account lockout after 3-5 failed attempts (with automatic unlock after 15-30 minutes). Add rate limiting per IP (e.g., 10 attempts per minute). Consider adding captcha after 3 failures.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.314269",
+      "missing_fields_warning": [
+        "evidence"
+      ]
+    },
+    {
+      "id": "f2733e68-9926-4c47-8019-6d37ada71349",
+      "title": "Potential for session fixation or weak session management",
+      "description": "The login form includes a query parameter 'from=%2F' redirect after login. This suggests the application may be susceptible to session fixation or open redirect if not properly handled. Additionally, no HTTP-only or Secure flags on cookies were observed (though not directly tested).",
+      "severity": "info",
+      "confidence_score": 0.9,
+      "validated": false,
+      "cwe_id": "CWE-840",
+      "owasp_category": "A04:2021",
+      "remediation": "Regenerate session ID upon successful login. Set HttpOnly, Secure, SameSite=Strict flags on session cookies. Validate redirect targets to prevent open redirect.",
+      "source_agent": "reasoner",
+      "finding_metadata": {},
+      "created_at": "2026-06-01T15:57:57.315067"
+    }
+  ],
+  "hypotheses": [],
+  "provenance_chains": [],
+  "attack_paths": [],
+  "hypothesis_coverage": {
+    "categories": {},
+    "total_hypotheses": 0,
+    "categories_tested": 0,
+    "categories_confirmed": 0
+  },
+  "metadata": {
+    "generated_at": "2026-06-01T16:04:05.242913+00:00",
+    "generator": "assurix_json_report_v2",
+    "total_findings": 13,
+    "confirmed_findings": 10,
+    "informational_findings": 1,
+    "total_hypotheses": 0,
+    "total_provenance_links": 0
+  }
+}

@@ -9,7 +9,9 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.agents.base import BaseAgent
+from src.agents.browser.agent_browser_operator import AgentBrowserOperator
 from src.agents.browser.ai_operator import AIBrowserOperator
+from src.agents.browser.crawl_strategy import CrawlStrategy
 from src.agents.browser.memory import FindingMemory
 from src.agents.browser.suspicious_points import SuspiciousPointDetector
 from src.core.audit import log_action
@@ -54,8 +56,14 @@ class ReconAgent(BaseAgent):
 
         # Phase 1: Fast HTTPX headers + basic crawl
         visited: set[str] = set()
+
+        # Seed pre-authenticated cookies if provided (benchmark DVWA support)
+        auth_cookies = payload.get("auth_cookies")
+        client_cookies = auth_cookies if auth_cookies else None
+
         async with httpx.AsyncClient(
             timeout=30.0, follow_redirects=True, max_redirects=5, http2=True,
+            cookies=client_cookies,
         ) as client:
             try:
                 resp = await client.get(target_url)
@@ -175,6 +183,36 @@ class ReconAgent(BaseAgent):
                     })
             finally:
                 await browser.stop()
+
+        # Phase 3 (Phase 3 of plan): agent-browser (Vercel) — preferred when available.
+        # Adds interactive BFS, network introspection, and JS-rendered discovery
+        # that the AI operator may miss.
+        engagement_id = payload.get("engagement_id", "default")
+        ab = AgentBrowserOperator(engagement_id=engagement_id)
+        if ab.is_available:
+            try:
+                strategy = CrawlStrategy(max_pages=100, max_depth=2)
+                ab_surface = await strategy.crawl(target_url, ab)
+                # Merge into existing surface
+                existing_page_urls = {p.get("url") if isinstance(p, dict) else p for p in surface["pages"]}
+                for page in ab_surface.pages:
+                    if page not in existing_page_urls:
+                        surface["pages"].append({"url": page, "status_code": 200, "content_type": "text/html"})
+                for ep in ab_surface.endpoints:
+                    if ep not in surface.get("endpoints", []):
+                        surface.setdefault("endpoints", []).append(ep)
+                for form in ab_surface.forms:
+                    if not any(f.get("action") == form.get("action") for f in surface.get("forms", [])):
+                        surface.setdefault("forms", []).append(form)
+                for auth in ab_surface.auth_pages:
+                    if not any(a.get("url") == auth for a in surface.get("auth_pages", [])):
+                        surface.setdefault("auth_pages", []).append({"url": auth, "auth_type": "detected"})
+                # Headers from the agent-browser fetch (may differ from HTTPX due to JS-rendered redirects)
+                if ab_surface.headers:
+                    surface.setdefault("ab_headers", {}).update(ab_surface.headers)
+                await ab.close()
+            except Exception as exc:
+                logger.warning("AgentBrowserOperator enrichment failed: %s", exc)
 
         # Detect technologies from combined data
         surface["technologies"] = self._detect_technologies(

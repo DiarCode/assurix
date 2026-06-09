@@ -16,8 +16,11 @@ import time
 from dataclasses import dataclass
 from statistics import mean
 from urllib.parse import urljoin, urlparse, urlencode, parse_qs, urlunparse
+from typing import Any
 
 import httpx
+
+from .payload_mutator import Gene, MutationResult, PayloadMutator
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +57,15 @@ class XSSPipeline:
 
     CONTEXTS = ["url_param", "form_post", "cookie"]
 
-    def __init__(self, max_concurrent: int = 5, timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        max_concurrent: int = 5,
+        timeout: float = 10.0,
+        mutator: PayloadMutator | None = None,
+    ) -> None:
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.timeout = timeout
+        self.mutator = mutator
 
     async def _request(self, client: httpx.AsyncClient, method: str, url: str, **kwargs) -> httpx.Response | None:
         async with self.semaphore:
@@ -119,6 +128,47 @@ class XSSPipeline:
                             ))
                             break
 
+            # Genetic mutation evolution: if XSS detected, evolve payloads
+            if results and self.mutator is not None:
+                try:
+                    seed_payloads = [p for p, _ in self.REFLECTED_PAYLOADS] + [p for p, _ in self.DOM_PAYLOADS]
+                    mutation_result = await self.mutator.evolve(
+                        vuln_class="xss",
+                        seed_payloads=seed_payloads,
+                        generations=2,
+                        population_size=8,
+                        target_url=base_url,
+                        http_client=client,
+                    )
+                    logger.info(
+                        "XSS evolution: %d genes, best_fitness=%.3f, %d novel",
+                        len(mutation_result.genes), mutation_result.best_fitness, mutation_result.novel_count,
+                    )
+                    # Test evolved payloads for additional findings
+                    for gene in mutation_result.genes[:5]:
+                        if gene.fitness_score > 0.3:
+                            for endpoint in (endpoints or ["/", "/search"]):
+                                url = urljoin(base_url, endpoint.lstrip("/"))
+                                parsed = urlparse(url)
+                                qs = parse_qs(parsed.query)
+                                qs["q"] = [gene.payload]
+                                test_url = urlunparse((
+                                    parsed.scheme, parsed.netloc, parsed.path,
+                                    parsed.params, urlencode(qs, doseq=True), parsed.fragment,
+                                ))
+                                resp = await self._request(client, "GET", test_url)
+                                if resp and resp.status_code == 200:
+                                    if gene.payload.lower()[:20] in resp.text.lower() or self.MARKER_PREFIX in resp.text.lower():
+                                        results.append(VulnResult(
+                                            url=test_url, vuln_class="xss",
+                                            finding=f"Evolved XSS (gen={gene.generation}, fitness={gene.fitness_score:.2f}): {gene.obfuscation}",
+                                            severity="high",
+                                            evidence=f"Evolved payload reflected at {test_url[:120]}",
+                                            confidence=min(0.7 + gene.fitness_score * 0.3, 0.95), cwe_id="CWE-79",
+                                        ))
+                except Exception as exc:
+                    logger.warning("XSS mutation evolution failed: %s", exc)
+
         return results
 
 
@@ -158,9 +208,15 @@ class SQLiPipeline:
         "mssql": ("1; WAITFOR DELAY '0:0:3'--", "1; WAITFOR DELAY '0:0:0'--"),
     }
 
-    def __init__(self, max_concurrent: int = 3, timeout: float = 15.0) -> None:
+    def __init__(
+        self,
+        max_concurrent: int = 3,
+        timeout: float = 15.0,
+        mutator: PayloadMutator | None = None,
+    ) -> None:
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.timeout = timeout
+        self.mutator = mutator
 
     async def _request(self, client: httpx.AsyncClient, method: str, url: str, **kwargs) -> httpx.Response | None:
         async with self.semaphore:
@@ -234,6 +290,41 @@ class SQLiPipeline:
                             ))
                             break
 
+            # Genetic mutation evolution: if SQLi detected, evolve payloads
+            if results and self.mutator is not None:
+                try:
+                    seed_payloads = [p for p, _ in self.ERROR_PAYLOADS] + self.BOOLEAN_TRUE_PAYLOADS
+                    mutation_result = await self.mutator.evolve(
+                        vuln_class="sqli",
+                        seed_payloads=seed_payloads,
+                        generations=2,
+                        population_size=8,
+                        target_url=base_url,
+                        http_client=client,
+                    )
+                    logger.info(
+                        "SQLi evolution: %d genes, best_fitness=%.3f, %d novel",
+                        len(mutation_result.genes), mutation_result.best_fitness, mutation_result.novel_count,
+                    )
+                    for gene in mutation_result.genes[:5]:
+                        if gene.fitness_score > 0.3:
+                            for param in (params or ["id", "q"]):
+                                test_url = f"{url}?{param}={gene.payload}"
+                                resp = await self._request(client, "GET", test_url)
+                                if resp:
+                                    body_lower = resp.text.lower()
+                                    found_errors = [e for e in self.SQL_ERROR_PATTERNS if e in body_lower]
+                                    if found_errors:
+                                        results.append(VulnResult(
+                                            url=test_url, vuln_class="sqli",
+                                            finding=f"Evolved SQLi (gen={gene.generation}, fitness={gene.fitness_score:.2f}): {gene.obfuscation}",
+                                            severity="high",
+                                            evidence=f"SQL errors: {found_errors} at {test_url[:120]}",
+                                            confidence=min(0.7 + gene.fitness_score * 0.2, 0.95), cwe_id="CWE-89",
+                                        ))
+                except Exception as exc:
+                    logger.warning("SQLi mutation evolution failed: %s", exc)
+
         return results
 
 
@@ -271,9 +362,15 @@ class SSRFPipeline:
 
     SSRF_PARAMS = ["url", "redirect", "next", "callback", "dest", "path", "file", "uri", "domain", "return_to"]
 
-    def __init__(self, max_concurrent: int = 3, timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        max_concurrent: int = 3,
+        timeout: float = 10.0,
+        mutator: PayloadMutator | None = None,
+    ) -> None:
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.timeout = timeout
+        self.mutator = mutator
 
     async def _request(self, client: httpx.AsyncClient, method: str, url: str, **kwargs) -> httpx.Response | None:
         async with self.semaphore:
@@ -345,6 +442,42 @@ class SSRFPipeline:
                                 confidence=0.95, cwe_id="CWE-918",
                             ))
 
+            # Genetic mutation evolution: if SSRF detected, evolve payloads
+            if results and self.mutator is not None:
+                try:
+                    seed_payloads = [url for url, _ in self.CLOUD_METADATA_URLS] + [url for url, _ in self.INTERNAL_SERVICES]
+                    mutation_result = await self.mutator.evolve(
+                        vuln_class="ssrf",
+                        seed_payloads=seed_payloads,
+                        generations=2,
+                        population_size=8,
+                        target_url=base_url,
+                        http_client=client,
+                    )
+                    logger.info(
+                        "SSRF evolution: %d genes, best_fitness=%.3f, %d novel",
+                        len(mutation_result.genes), mutation_result.best_fitness, mutation_result.novel_count,
+                    )
+                    for gene in mutation_result.genes[:5]:
+                        if gene.fitness_score > 0.3:
+                            for param in self.SSRF_PARAMS[:3]:
+                                test_url = f"{base_url}?{param}={gene.payload}"
+                                resp = await self._request(client, "GET", test_url)
+                                if resp and resp.status_code == 200:
+                                    body_lower = resp.text.lower()
+                                    found_markers = [m for m in self.METADATA_MARKERS if m in body_lower]
+                                    if found_markers or (baseline_len > 0 and abs(len(resp.text) - baseline_len) > baseline_len * 0.3):
+                                        results.append(VulnResult(
+                                            url=test_url, vuln_class="ssrf",
+                                            finding=f"Evolved SSRF (gen={gene.generation}, fitness={gene.fitness_score:.2f}): {gene.obfuscation}",
+                                            severity="high",
+                                            evidence=f"Evolved payload triggered response anomaly",
+                                            confidence=min(0.7 + gene.fitness_score * 0.2, 0.95), cwe_id="CWE-918",
+                                        ))
+                                        break
+                except Exception as exc:
+                    logger.warning("SSRF mutation evolution failed: %s", exc)
+
         return results
 
 
@@ -370,9 +503,15 @@ class CommandInjectionPipeline:
 
     CMDI_PARAMS = ["cmd", "exec", "command", "ping", "host", "ip", "domain", "file", "path", "dir", "query", "search"]
 
-    def __init__(self, max_concurrent: int = 3, timeout: float = 15.0) -> None:
+    def __init__(
+        self,
+        max_concurrent: int = 3,
+        timeout: float = 15.0,
+        mutator: PayloadMutator | None = None,
+    ) -> None:
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.timeout = timeout
+        self.mutator = mutator
 
     async def _request(self, client: httpx.AsyncClient, method: str, url: str, **kwargs) -> httpx.Response | None:
         async with self.semaphore:
@@ -420,5 +559,38 @@ class CommandInjectionPipeline:
                                 confidence=0.8, cwe_id="CWE-78",
                             ))
                             break
+
+            # Genetic mutation evolution: if Cmdi detected, evolve payloads
+            if results and self.mutator is not None:
+                try:
+                    seed_payloads = [p for p, _ in self.ECHO_PAYLOADS] + [p for p, _ in self.TIME_PAYLOADS]
+                    mutation_result = await self.mutator.evolve(
+                        vuln_class="cmdi",
+                        seed_payloads=seed_payloads,
+                        generations=2,
+                        population_size=8,
+                        target_url=base_url,
+                        http_client=client,
+                    )
+                    logger.info(
+                        "Cmdi evolution: %d genes, best_fitness=%.3f, %d novel",
+                        len(mutation_result.genes), mutation_result.best_fitness, mutation_result.novel_count,
+                    )
+                    for gene in mutation_result.genes[:5]:
+                        if gene.fitness_score > 0.3:
+                            for param in self.CMDI_PARAMS[:3]:
+                                test_url = f"{base_url}?{param}={gene.payload}"
+                                resp = await self._request(client, "GET", test_url)
+                                if resp and self.MARKER in resp.text:
+                                    results.append(VulnResult(
+                                        url=test_url, vuln_class="cmdi",
+                                        finding=f"Evolved Cmdi (gen={gene.generation}, fitness={gene.fitness_score:.2f}): {gene.obfuscation}",
+                                        severity="critical",
+                                        evidence=f"Evolved payload executed via param '{param}'",
+                                        confidence=min(0.7 + gene.fitness_score * 0.2, 0.95), cwe_id="CWE-78",
+                                    ))
+                                    break
+                except Exception as exc:
+                    logger.warning("Cmdi mutation evolution failed: %s", exc)
 
         return results

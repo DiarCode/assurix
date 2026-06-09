@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assurix Security Report — https://admin.arboard.kz</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --text-dim: #94a3b8; --accent: #3b82f6; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 0; }
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom: 1px solid var(--border); padding: 2rem 0; margin-bottom: 2rem; }
+header .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.025em; }
+h2 { font-size: 1.35rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+.meta { color: var(--text-dim); font-size: 0.875rem; }
+.badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.severity-badge { color: #fff; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; }
+.card-value { font-size: 2rem; font-weight: 700; margin: 0.25rem 0; }
+.card-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.card.critical { border-left: 4px solid #dc2626; }
+.card.high { border-left: 4px solid #ea580c; }
+.card.medium { border-left: 4px solid #d97706; }
+.card.low { border-left: 4px solid #65a30d; }
+.card.info { border-left: 4px solid #6b7280; }
+.finding { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; }
+.finding-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.finding-title { font-size: 1rem; font-weight: 600; }
+.finding-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 0.375rem; font-size: 0.7rem; background: var(--border); color: var(--text-dim); }
+.finding-desc { color: var(--text-dim); font-size: 0.9rem; margin: 0.5rem 0; }
+.evidence-block { background: #0f172a; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.5rem 0; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; overflow-x: auto; }
+.risk-bar { height: 0.5rem; border-radius: 9999px; background: var(--border); overflow: hidden; margin: 0.5rem 0; }
+.risk-fill { height: 100%; border-radius: 9999px; transition: width 0.5s; }
+table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.875rem; }
+th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+.tier-badge { padding: 0.15rem 0.5rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; }
+.t1 { background: #7f1d1d; color: #fca5a5; }
+.t2 { background: #78350f; color: #fdba74; }
+.t3 { background: #713f12; color: #fcd34d; }
+.t4 { background: #365314; color: #bef264; }
+.t5 { background: #1e3a5f; color: #93c5fd; }
+.attack-path { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+.step-list { counter-reset: step; list-style: none; padding: 0; }
+.step-list li { counter-increment: step; position: relative; padding-left: 2rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.step-list li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; }
+footer { margin-top: 3rem; padding: 1.5rem 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 0.8rem; }
+@media (max-width: 640px) { .container { padding: 1rem; } .grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head><body>
+<header><div class='container'>
+<div><h1>🛡️ Assurix Security Report</h1><div class='meta'>https://admin.arboard.kz · 2026-06-02 05:47 UTC</div></div>
+<div><span class='badge severity-badge' style='background:#ea580c'>RISK: HIGH</span></div>
+</div></header>
+<div class='container'>
+<h2>📊 Executive Summary</h2>
+<div class='grid'>
+<div class='card critical'><div class='card-value'>0</div><div class='card-label'>CRITICAL</div></div>
+<div class='card high'><div class='card-value'>2</div><div class='card-label'>HIGH</div></div>
+<div class='card medium'><div class='card-value'>4</div><div class='card-label'>MEDIUM</div></div>
+<div class='card low'><div class='card-value'>5</div><div class='card-label'>LOW</div></div>
+<div class='card info'><div class='card-value'>1</div><div class='card-label'>INFO</div></div>
+<div class='card'><div class='card-value'>12</div><div class='card-label'>Total Findings</div></div>
+<div class='card'><div class='card-value'>6</div><div class='card-label'>Confirmed</div></div>
+</div>
+<div class='risk-bar'>
+<div class='risk-fill' style='width:16.7%;margin-left:0.0%;background:#ea580c'></div>
+<div class='risk-fill' style='width:33.3%;margin-left:16.7%;background:#d97706'></div>
+<div class='risk-fill' style='width:41.7%;margin-left:50.0%;background:#65a30d'></div>
+<div class='risk-fill' style='width:8.3%;margin-left:91.7%;background:#6b7280'></div>
+</div>
+<h2>🗺️ Attack Surface</h2>
+<div class='grid'>
+<div class='card'><div class='card-value'>0</div><div class='card-label'>Technologies</div></div>
+<div class='card'><div class='card-value'>0</div><div class='card-label'>Pages</div></div>
+<div class='card'><div class='card-value'>0</div><div class='card-label'>Endpoints</div></div>
+<div class='card'><div class='card-value'>0</div><div class='card-label'>Forms</div></div>
+</div>
+<h2>🪜 Capability Ladder</h2>
+<table><tr><th>Tier</th><th>Name</th><th>Count</th></tr>
+<tr><td><span class='tier-badge t5'>T5</span></td><td>Detection Only</td><td>12</td></tr>
+</table>
+<h2>🔍 Detailed Findings</h2>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>1. Missing Content-Security-Policy header</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#ea580c'>HIGH</span>
+<span class='tag'>CWE-693</span>
+<span class='tag'>A05:2021</span>
+<span class='tag'>🤖 webapp</span>
+</div></div>
+<p class='finding-desc'>No CSP — no protection against XSS and content injection</p>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 95%</p>
+<div class='evidence-block'>
+missing_header: content-security-policy
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>2. Missing Content-Security-Policy (CSP)</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#ea580c'>HIGH</span>
+<span class='tag'>🤖 missing_code_llm</span>
+</div></div>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 50%</p>
+<div class='evidence-block'>
+The browser observation explicitly states &#x27;Missing Content-Security-Policy header&#x27;, leaving the application vulnerable to XSS and content injection.
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>3. Missing x-frame-options header</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#d97706'>MEDIUM</span>
+<span class='tag'>CWE-693</span>
+<span class='tag'>A05:2021</span>
+<span class='tag'>🤖 webapp</span>
+</div></div>
+<p class='finding-desc'>Missing X-Frame-Options — clickjacking possible</p>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 90%</p>
+<div class='evidence-block'>
+missing_header: x-frame-options
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>4. Missing HSTS header</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#d97706'>MEDIUM</span>
+<span class='tag'>CWE-319</span>
+<span class='tag'>A02:2021</span>
+<span class='tag'>🤖 webapp</span>
+</div></div>
+<p class='finding-desc'>No Strict-Transport-Security — browsers may access via HTTP</p>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 95%</p>
+<div class='evidence-block'>
+missing_header: strict-transport-security
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>5. Missing Strict-Transport-Security (HSTS)</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#d97706'>MEDIUM</span>
+<span class='tag'>🤖 missing_code_llm</span>
+</div></div>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 50%</p>
+<div class='evidence-block'>
+The browser observation reports &#x27;Missing HSTS header&#x27;, meaning the application does not force HTTPS connections.
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>6. Missing X-Frame-Options</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#d97706'>MEDIUM</span>
+<span class='tag'>🤖 missing_code_llm</span>
+</div></div>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 50%</p>
+<div class='evidence-block'>
+The browser observation reports &#x27;Missing x-frame-options header&#x27;, which makes the application susceptible to clickjacking attacks.
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>7. Missing x-content-type-options header</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>A05:2021</span>
+<span class='tag'>🤖 webapp</span>
+</div></div>
+<p class='finding-desc'>Missing X-Content-Type-Options — MIME sniffing</p>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 90%</p>
+<div class='evidence-block'>
+missing_header: x-content-type-options
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>8. Missing referrer-policy header</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>A05:2021</span>
+<span class='tag'>🤖 webapp</span>
+</div></div>
+<p class='finding-desc'>Missing Referrer-Policy — URL leaks in Referer</p>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 90%</p>
+<div class='evidence-block'>
+missing_header: referrer-policy
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>9. Missing X-Content-Type-Options</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>🤖 missing_code_llm</span>
+</div></div>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 50%</p>
+<div class='evidence-block'>
+The browser observation reports &#x27;Missing x-content-type-options header&#x27;, allowing the browser to potentially perform MIME sniffing.
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>10. Missing Referrer-Policy</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>🤖 missing_code_llm</span>
+</div></div>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 50%</p>
+<div class='evidence-block'>
+The browser observation reports &#x27;Missing referrer-policy header&#x27;, which may lead to sensitive URL information leaking in the Referer header.
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>11. Missing Permissions-Policy</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>🤖 missing_code_llm</span>
+</div></div>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 50%</p>
+<div class='evidence-block'>
+The browser observation reports &#x27;Missing permissions-policy header&#x27;, meaning browser features (like camera or microphone) are not restricted.
+</div>
+</div>
+<div class='finding'>
+<div class='finding-header'>
+<div class='finding-title'>12. Missing permissions-policy header</div>
+<div class='finding-meta'>
+<span class='badge severity-badge' style='background:#6b7280'>INFO</span>
+<span class='tag'>A05:2021</span>
+<span class='tag'>🤖 webapp</span>
+</div></div>
+<p class='finding-desc'>Missing Permissions-Policy — browser features unrestricted</p>
+<p style='font-size:0.8rem;color:var(--text-dim)'>Confidence: 90%</p>
+<div class='evidence-block'>
+missing_header: permissions-policy
+</div>
+</div>
+<footer><p>Report generated by <strong>Assurix</strong> Autonomous Security Validation Platform</p><p>2026-06-02 05:47 UTC · Engagement direct-20260602-054717</p></footer>
+</div></body></html>

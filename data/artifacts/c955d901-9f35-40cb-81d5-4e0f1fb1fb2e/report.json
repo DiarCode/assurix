@@ -1,0 +1,18 @@
+{
+  "engagement_id": "c955d901-9f35-40cb-81d5-4e0f1fb1fb2e",
+  "target_url": "https://dj1naq.sytes.net",
+  "status": "running",
+  "elapsed_seconds": 1201.2,
+  "findings": [],
+  "capability_scores": [],
+  "severity_counts": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "info": 0
+  },
+  "risk_rating": "informational",
+  "surface": {},
+  "total_findings": 0
+}

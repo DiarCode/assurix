@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import quote
+
+import httpx
 
 
 @dataclass
@@ -232,6 +235,7 @@ class PayloadGenerator:
 
     def __init__(self, callback_host: str = ""):
         self.callback_host = callback_host
+        self._mutator: PayloadMutator | None = None
 
     def get_payloads(
         self,
@@ -321,3 +325,56 @@ class PayloadGenerator:
                   "path_traversal": "Path traversal", "cmdi": "Command injection",
                   "ssti": "Template injection", "xxe": "XXE injection", "ldap": "LDAP injection"}
         return f"{labels.get(category, category)}: {payload[:60]}"
+
+    # ------------------------------------------------------------------
+    # Genetic Mutation Integration
+    # ------------------------------------------------------------------
+
+    async def mutate_payloads(
+        self,
+        category: str,
+        context: str = "html",
+        generations: int = 3,
+        population_size: int = 10,
+        llm_client: Any | None = None,
+        target_url: str = "",
+        http_client: httpx.AsyncClient | None = None,
+    ) -> list[Payload]:
+        """Evolve payloads using the genetic mutation engine.
+
+        Takes the static payloads for *category*, runs them through the
+        PayloadMutator evolution loop, and returns the resulting
+        evolved payloads as ``Payload`` objects.
+        """
+        from .payload_mutator import PayloadMutator
+
+        if self._mutator is None:
+            self._mutator = PayloadMutator()
+
+        seed_payloads = self._get_raw_payloads(category)
+        if not seed_payloads:
+            return self.get_payloads(category, context, include_waf_bypass=False)
+
+        mutation_result = await self._mutator.evolve(
+            vuln_class=category,
+            seed_payloads=seed_payloads,
+            generations=generations,
+            population_size=population_size,
+            llm_client=llm_client,
+            target_url=target_url,
+            http_client=http_client,
+        )
+
+        evolved_payloads: list[Payload] = []
+        for gene in mutation_result.genes:
+            evolved_payloads.append(Payload(
+                value=gene.payload,
+                category=category,
+                context=context,
+                detection=self._detection_string(category, gene.payload),
+                severity=self._severity(category),
+                description=f"{self._description(category, gene.payload)} (gen={gene.generation}, "
+                            f"fitness={gene.fitness_score:.2f}, obfuscation={gene.obfuscation})",
+            ))
+
+        return evolved_payloads

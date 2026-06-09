@@ -166,7 +166,8 @@ class TestBenchmarkRunnerDryRun:
         try:
             runner = BenchmarkRunner()
             async with get_db_session() as session:
-                run = await runner.run_dry("cybergym", session)
+                result = await runner.run_dry("cybergym", session)
+            run = result["run"]
             assert run.status == "completed"
             assert run.precision is not None
             assert run.f1 is not None
@@ -184,7 +185,8 @@ class TestBenchmarkRunnerDryRun:
             runner = BenchmarkRunner()
             for suite_name in list_suites():
                 async with get_db_session() as session:
-                    run = await runner.run_dry(suite_name, session)
+                    result = await runner.run_dry(suite_name, session)
+                run = result["run"]
                 assert run.status == "completed", f"{suite_name} did not complete"
                 assert run.weighted_score is not None, f"{suite_name} missing weighted_score"
                 assert run.pass_at_k_score is not None, f"{suite_name} missing pass_at_k_score"

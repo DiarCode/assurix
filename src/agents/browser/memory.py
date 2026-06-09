@@ -8,7 +8,10 @@ to markdown files. Each finding requires an evidence reference
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from src.agents.meta_learning import TechniqueMemory
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +323,21 @@ class FindingMemory:
         self._persist_hypotheses()
 
     # --- Action Deduplication (Mythos Enhancement) ---
+
+    # --- Technique Memory (Phase 5: Meta-Learning) ---
+
+    _technique_memory: "TechniqueMemory | None" = None
+
+    def get_technique_memory(self) -> "TechniqueMemory":
+        """Lazily initialise and return a TechniqueMemory instance.
+
+        Uses the project's default database path so technique outcomes are
+        persisted across engagements.
+        """
+        if self._technique_memory is None:
+            from src.agents.meta_learning import TechniqueMemory
+            self._technique_memory = TechniqueMemory()
+        return self._technique_memory
 
     def _action_hash(self, action_type: str, url: str, params: str = "") -> str:
         """Generate a hash for action deduplication."""

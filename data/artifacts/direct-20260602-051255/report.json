@@ -1,0 +1,28 @@
+{
+  "engagement_id": "direct-20260602-051255",
+  "target_url": "https://admin.arboard.kz",
+  "status": "completed",
+  "elapsed_seconds": 531.7,
+  "findings": [],
+  "capability_scores": [],
+  "severity_counts": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "info": 0
+  },
+  "risk_rating": "informational",
+  "surface": {},
+  "total_findings": 0,
+  "scan_log": [
+    {
+      "phase": "pentester",
+      "findings": 0
+    },
+    {
+      "phase": "validation",
+      "findings": 0
+    }
+  ]
+}

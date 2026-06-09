@@ -17,7 +17,7 @@ import json
 import logging
 from typing import Any
 
-from src.llm.client import OllamaClient
+from src.llm.frontier_client import UnifiedLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +210,7 @@ class MissingCodeDetector:
         if browser_result.get("findings"):
             browser_obs = str(browser_result["findings"][:10])[:2000]
 
-        llm = OllamaClient()
+        llm = UnifiedLLMClient()
         try:
             response = await llm.chat(
                 messages=[

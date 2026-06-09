@@ -13,7 +13,8 @@ import json
 import logging
 from typing import Any
 
-from src.llm.client import OllamaClient
+from src.graph.capabilities import guard_capability
+from src.llm.frontier_client import UnifiedLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class AttackGraphBuilder:
         if not findings:
             return {"attack_paths": [], "nodes": [], "edges": []}
 
-        llm = OllamaClient()
+        llm = UnifiedLLMClient()
         try:
             findings_json = json.dumps(findings[:20], default=str)[:4000]
             surface_json = json.dumps(
@@ -115,12 +116,54 @@ class AttackGraphBuilder:
         for path in result.get("attack_paths", []):
             steps = path.get("steps", [])
             for i in range(len(steps) - 1):
+                # Plan §3.3.1.bis: capability is populated from the LLM
+                # response. Apply the runtime guard before the value reaches
+                # GraphEdge.capability. The chainer BFS will skip edges that
+                # end up with None capability (no consumes/grants match).
+                raw_capability = steps[i].get("capability")
+                capability = guard_capability(raw_capability)
                 edges.append({
                     "from": steps[i].get("finding", "")[:50],
                     "to": steps[i + 1].get("finding", "")[:50],
                     "relationship": steps[i].get("edge_to_next", "enables"),
+                    "capability": capability,
                 })
         return edges
+
+    @staticmethod
+    def edges_with_capability(
+        capability: str | None,
+        graph: dict[str, Any] | None = None,
+        edges: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return edges that grant the named capability.
+
+        Plan §3.3.1: the chainer calls this for each ``ChainPattern.grants``
+        value to find edges whose target is the "next step" in a chain.
+        The check is an exact-string match against the edge's
+        ``capability`` field; unknown capabilities were already
+        dropped to NULL by ``_extract_edges`` so they cannot match.
+
+        Args:
+            capability: A string from the closed vocabulary in
+                ``src/graph/capabilities.py``. When ``None``, the
+                function returns an empty list — NULL capabilities
+                are deliberately not matched (matches would be
+                ambiguous and produce false chains).
+            graph: An optional pre-built graph dict
+                (``{"edges": [...]}``). Used when ``edges`` is None.
+            edges: An explicit list of edge dicts. Takes precedence
+                over ``graph``. This is the form the chainer uses
+                because it pulls edges from a passed-in graph dict.
+        """
+        if capability is None:
+            return []
+        if edges is None:
+            if graph is not None:
+                edges = graph.get("edges") or []
+            else:
+                return []
+        return [e for e in edges if e.get("capability") == capability]
 
     @staticmethod
     def _heuristic_chain(findings: list[dict]) -> dict[str, Any]:

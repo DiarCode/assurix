@@ -61,6 +61,7 @@ class AIBrowserOperator:
         self._engagement_id = engagement_id
         self._headless = settings.browser_use_headless
         self._max_steps = settings.browser_use_max_steps
+        self._step_timeout_seconds = settings.browser_use_step_timeout_seconds
         self._keep_alive = settings.browser_use_keep_alive
         self._ollama_host = settings.ollama_host
         self._ollama_api_key = settings.ollama_api_key
@@ -76,6 +77,11 @@ class AIBrowserOperator:
             token_budget=settings.acc_token_budget,
             max_hypotheses=settings.acc_max_hypotheses,
         )
+        # Tracks every BrowserSession opened by `_run_agent` so `stop()` can
+        # close them deterministically. Without this list, browser-use LLM
+        # schema errors that hang the agent also leak the Playwright subprocess
+        # because the `finally` block in `_run_agent` never executes.
+        self._live_sessions: list[BrowserSession] = []
 
     def _get_llm(self, task_type: str = "reasoning"):
         """Create OllamaChatLLM instance (handles markdown-fenced JSON from cloud models)."""
@@ -153,7 +159,19 @@ class AIBrowserOperator:
         return None
 
     async def stop(self) -> None:
-        """Close browser and save evidence."""
+        """Close any live BrowserSession and save evidence.
+
+        Closes every session that `_run_agent` opened and didn't manage to
+        close itself (e.g. because `agent.run()` exceeded the wall-clock
+        budget and was cancelled by `asyncio.wait_for`). Without this, a
+        schema-mismatch retry loop would leak the Playwright subprocess.
+        """
+        for session in list(self._live_sessions):
+            try:
+                await session.close()
+            except Exception as exc:
+                logger.debug("Error closing live browser session: %s", exc)
+        self._live_sessions.clear()
         logger.info("AI Browser closed, evidence count: %d", len(self._evidence))
 
     async def explore(self, target_url: str, directives: list[dict] | None = None) -> dict[str, Any]:
@@ -192,6 +210,7 @@ class AIBrowserOperator:
 
         # Create a fresh BrowserSession per agent run
         browser_session = BrowserSession(**session_kwargs)
+        self._live_sessions.append(browser_session)
 
         agent = Agent(
             task=task,
@@ -223,26 +242,57 @@ class AIBrowserOperator:
             except Exception as exc:
                 logger.debug("Step hook error: %s", exc)
 
-        logger.info("Starting AI agent task on %s (type=%s)", target_url, task_type)
+        # Wall-clock ceiling. The browser-use library validates the LLM's
+        # `AgentOutput` against a Pydantic model and retries on schema
+        # mismatch — the inner `agent.run()` call has no built-in time
+        # budget, so a single bad response can stall the entire scan.
+        # `asyncio.wait_for` is the simplest, most reliable cap.
+        # 60s slack covers browser launch + first page navigation.
+        total_budget = (
+            self._max_steps * self._step_timeout_seconds
+        ) + 60
+
+        logger.info(
+            "Starting AI agent task on %s (type=%s, budget=%ds, max_steps=%d)",
+            target_url, task_type, total_budget, self._max_steps,
+        )
 
         try:
-            history = await agent.run(
-                max_steps=self._max_steps,
-                on_step_start=on_step,
-            )
-        except Exception as exc:
-            logger.error("AI agent task failed: %s", exc)
-            return {
-                "error": str(exc),
-                "target_url": target_url,
-                "task_type": task_type,
-                "visited_urls": visited_urls,
-            }
+            try:
+                history = await asyncio.wait_for(
+                    agent.run(
+                        max_steps=self._max_steps,
+                        on_step_start=on_step,
+                    ),
+                    timeout=total_budget,
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    "AI agent task on %s exceeded %ds budget (%d steps × %ds/step); aborting",
+                    target_url, total_budget, self._max_steps, self._step_timeout_seconds,
+                )
+                return {
+                    "error": f"timeout after {total_budget}s",
+                    "target_url": target_url,
+                    "task_type": task_type,
+                    "visited_urls": visited_urls,
+                    "findings": [],
+                }
+            except Exception as exc:
+                logger.error("AI agent task failed: %s", exc)
+                return {
+                    "error": str(exc),
+                    "target_url": target_url,
+                    "task_type": task_type,
+                    "visited_urls": visited_urls,
+                }
         finally:
             try:
                 await browser_session.close()
             except Exception:
                 pass
+            if browser_session in self._live_sessions:
+                self._live_sessions.remove(browser_session)
 
         # Extract results from agent history
         result: dict[str, Any] = {
