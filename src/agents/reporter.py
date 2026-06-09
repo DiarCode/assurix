@@ -71,6 +71,25 @@ class ReporterAgent(BaseAgent):
         analysis_notes = previous.get("analysis_notes", "")
         engagement_id = payload.get("engagement_id", "default")
 
+        # W2-C: the research_loop summary result (``findings: []``)
+        # is empty even when the per-agent ``persist_findings`` helper
+        # has already written 14+ rows to the ``findings`` table.
+        # Per CLAUDE.md, the DB row is the source of truth — fall
+        # back to it whenever the in-memory payload is empty so the
+        # report actually renders what was found instead of "no
+        # exploitable vulnerabilities". This was the dj1naq.sytes.net
+        # regression: 29 findings in the DB, 0 in the report.
+        if not validated_findings and engagement_id and engagement_id != "default":
+            validated_findings = await self._load_findings_from_db(
+                session, engagement_id
+            )
+            if validated_findings:
+                logger.info(
+                    "Reporter: %d findings recovered from DB (in-memory "
+                    "previous_result.findings was empty)",
+                    len(validated_findings),
+                )
+
         severity_counts: dict[str, int] = {
             "critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0,
         }
@@ -249,6 +268,54 @@ class ReporterAgent(BaseAgent):
         # Flush so the IDs are assigned, but don't commit — the engine
         # commits the surrounding transaction.
         await session.flush()
+
+    async def _load_findings_from_db(
+        self, session: AsyncSession, engagement_id: str
+    ) -> list[dict[str, Any]]:
+        """Recover findings from the DB when the in-memory payload is empty.
+
+        W2-C: the live engine's research_loop summary returns
+        ``{"findings": [], ...}`` even when the per-agent
+        ``persist_findings`` helper (W1-B) has already written
+        rows to the ``findings`` table. Per CLAUDE.md, the DB row
+        is the source of truth for any future report regeneration,
+        so the reporter reloads from the table when the in-memory
+        list is empty. Each row is converted to the same dict shape
+        the rest of the reporter expects.
+        """
+        from sqlalchemy import select
+        from src.db.models import Finding
+
+        stmt = (
+            select(Finding)
+            .where(Finding.engagement_id == engagement_id)
+            .order_by(Finding.created_at)
+        )
+        result = await session.execute(stmt)
+        rows = result.scalars().all()
+        return [self._finding_row_to_dict(r) for r in rows]
+
+    @staticmethod
+    def _finding_row_to_dict(row: Any) -> dict[str, Any]:
+        """Convert a ``Finding`` SQLAlchemy row to the dict shape the
+        reporter (and ``generate_report``) expects."""
+        metadata = dict(row.finding_metadata or {})
+        return {
+            "title": row.title,
+            "description": row.description,
+            "severity": row.severity,
+            "confidence_score": float(row.confidence_score or 0.0),
+            "validated": bool(row.validated),
+            "cwe_id": row.cwe_id,
+            "owasp_category": row.owasp_category,
+            "remediation": row.remediation,
+            "source_agent": row.source_agent,
+            "dedup_key": row.dedup_key,
+            "evidence": metadata.get("evidence", {}),
+            "poc": metadata.get("poc"),
+            "request_response": metadata.get("request_response"),
+            "attack_path": metadata.get("attack_path"),
+        }
 
     def _build_methodology(
         self,
