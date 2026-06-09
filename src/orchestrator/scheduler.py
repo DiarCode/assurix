@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Job, JobStatus
@@ -99,6 +99,35 @@ class JobScheduler:
                     )
                 )
             await session.flush()
+
+    async def count_active(
+        self, session: AsyncSession, engagement_id: str
+    ) -> int:
+        """Count jobs that are still in flight for an engagement.
+
+        W2-B (defect 4): the engine's terminal-transition check
+        needs to know whether the job queue is fully drained before
+        marking the engagement ``COMPLETED``. A non-zero return
+        means the engine MUST NOT transition — the polling loop's
+        next iteration will pick up the still-pending or running
+        job and process it.
+
+        "Active" = any of ``QUEUED``, ``RUNNING``, ``RETRYING`` for
+        the given engagement. ``COMPLETED`` and ``FAILED`` jobs are
+        terminal and don't count.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(Job)
+            .where(Job.engagement_id == engagement_id)
+            .where(
+                Job.status.in_(
+                    [JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.RETRYING]
+                )
+            )
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one() or 0)
 
     async def load_pending(self, session: AsyncSession, engagement_id: str | None = None) -> None:
         """Hydrate the in-memory queue from SQLite on startup.

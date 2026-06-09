@@ -141,6 +141,33 @@ class Settings(BaseSettings):
             "engine can route to the reporter instead of stalling."
         ),
     )
+    hypothesis_orchestrator_cumulative_budget_seconds: float = Field(
+        default=900.0,
+        ge=30.0,
+        le=7200.0,
+        description=(
+            "Cumulative wall-clock budget for one HypothesisOrchestrator execution. "
+            "Each per-tool call's per-call timeout is dynamically derived from the "
+            "remaining budget (capped at 180s) so a slow tool call near the end of "
+            "the budget cannot exceed the overall ceiling. When the budget is "
+            "exhausted, the orchestrator stops dispatching and returns whatever "
+            "findings were collected. Replaces the previous hardcoded 180s per-call "
+            "timeout that caused the live dj1naq.sytes.net scan to hang on a single "
+            "stuck tool invocation (defect 3)."
+        ),
+    )
+    hypothesis_orchestrator_per_call_timeout_seconds: float = Field(
+        default=180.0,
+        ge=5.0,
+        le=600.0,
+        description=(
+            "Maximum per-tool-call timeout the orchestrator will ever request. "
+            "Actual timeout per call is "
+            "min(per_call_timeout, remaining_cumulative_budget - 10s). "
+            "10s of headroom is reserved so the orchestrator can finalize "
+            "its result before the cumulative ceiling is hit."
+        ),
+    )
     browser_use_keep_alive: bool = Field(
         default=True,
         description="Keep browser session alive between agent runs",

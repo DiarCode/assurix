@@ -305,6 +305,22 @@ class WebappAgent(BaseAgent):
             payload={"target_url": target_url, "findings_count": len(findings)},
         )
 
+        # W1-B: persist findings to the DB at the source so they
+        # survive even if the reporter is skipped, the engagement is
+        # terminated early, or a downstream agent swallows the result.
+        # The reporter's own _persist_findings is idempotent (dedup_key
+        # indexed), so this is a no-op on re-runs.
+        engagement_id = payload.get("engagement_id", "")
+        if engagement_id and findings:
+            from src.agents._finding_persistence import persist_findings
+            await persist_findings(
+                session=session,
+                engagement_id=engagement_id,
+                findings=findings,
+                source_agent="webapp",
+                target_url=target_url,
+            )
+
         return {
             "findings": findings,
             "artifacts": artifacts,

@@ -94,7 +94,19 @@ class EGATSPlanner(BaseAgent):
         """
         target_url = payload.get("target_url", "")
         candidates = list(payload.get("candidates", []))
-        graph = payload.get("graph")
+        # Recon adjacency graph: serialised as ``graph_dict`` in the job
+        # payload (the engine stores payloads as JSON, so a live callable
+        # is not portable). Reconstruct a ``LinkGraph`` whose
+        # ``neighbors(url)`` method is what the BFS calls. ``payload.get``
+        # also accepts the live callable for in-process callers (tests,
+        # repl) — both paths converge on a neighbours API.
+        graph: Any = None
+        if payload.get("graph") is not None and callable(payload.get("graph")):
+            graph = payload["graph"]
+        elif payload.get("graph_dict"):
+            # Local import: ``LinkGraph`` lives in src/agents/recon/.
+            from src.agents.recon.link_graph import LinkGraph
+            graph = LinkGraph.from_dict(payload["graph_dict"])
         dry_run = bool(payload.get("dry_run", False))
 
         recon_budget = max(1, int(self.max_iterations * self.recon_budget_fraction))

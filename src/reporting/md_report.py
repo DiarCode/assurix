@@ -168,6 +168,7 @@ def generate_report(
     artifacts_dir: Path | None = None,
     proofs_of_concept: list[dict[str, Any]] | None = None,
     *,
+    raw_analysis_notes: str = "",
     llm_narrative: dict[str, Any] | None = None,
     methodology: dict[str, Any] | None = None,
     config: Any | None = None,
@@ -184,11 +185,19 @@ def generate_report(
         findings: List of validated findings (dicts).
         attack_paths: Optional list of attack-path dicts.
         surface: Optional attack-surface dict (technologies, pages, etc.).
-        analysis_notes: Free-form notes from the LLM (best-effort).
+        analysis_notes: Kept for API compatibility; superseded by
+            ``raw_analysis_notes``. New callers should pass raw analyst
+            notes through ``raw_analysis_notes`` so they render in the
+            dedicated "Analyst Notes" section instead of the executive
+            summary.
         risk_rating: One of "critical", "high", "medium", "low".
         artifacts_dir: Kept for API compatibility; ignored — the report
             always lands in ``data/reports/``.
         proofs_of_concept: Optional list of PoC dicts.
+        raw_analysis_notes: Raw analyst notes from the previous agent's
+            ``analysis_notes`` field. Rendered in their own section
+            after the methodology so the LLM-driven executive summary
+            isn't conflated with the raw notes (W1-C).
         llm_narrative: Optional pre-rendered narrative dict with keys
             ``executive_summary``, ``risk_assessment``, ``key_findings``,
             ``remediation_priority``, ``compliance_notes``. When the LLM
@@ -239,7 +248,6 @@ def generate_report(
     # or returned garbage.
     lines.extend(_format_executive_summary(
         llm_narrative=llm_narrative,
-        analysis_notes=analysis_notes,
         findings=sorted_findings,
         target_url=target_url,
         severity_counts=severity_counts,
@@ -264,6 +272,15 @@ def generate_report(
 
     if surface:
         lines.extend(_format_surface(surface))
+
+    # Raw analyst notes from the previous agent's ``analysis_notes``
+    # field. Rendered after methodology, before findings, so the reader
+    # sees the kill-chain summary, the surface map, and the operator's
+    # notes in that order. The executive summary above is the LLM's
+    # narrative; this section is the operator's raw notes — the two
+    # must not be conflated (W1-C).
+    if raw_analysis_notes:
+        lines.extend(_format_analyst_notes(raw_analysis_notes))
 
     if sorted_findings:
         lines.extend([f"## Detailed Findings", f""])
@@ -299,10 +316,9 @@ def generate_report(
 
 def _format_executive_summary(
     llm_narrative: dict[str, Any] | None,
-    analysis_notes: str,
     findings: list[dict[str, Any]],
     target_url: str,
-    severity_counts: dict[str, int],
+    severity_counts: dict[str, Any],
 ) -> list[str]:
     """Render the executive summary section.
 
@@ -310,6 +326,12 @@ def _format_executive_summary(
     falls back to a deterministic summary derived from the findings.
     The technical template MUST always render — a missing LLM is not a
     blocker for the report.
+
+    Note: ``analysis_notes`` is no longer rendered here. The reporter
+    passes raw analyst notes as a separate ``raw_analysis_notes``
+    argument to ``generate_report``; they are rendered in their own
+    ``## Analyst Notes`` section further down the report so the LLM
+    summary and the raw notes are not conflated (W1-C).
     """
     lines: list[str] = [f"## Executive Summary", f""]
     has_findings = bool(findings)
@@ -353,13 +375,30 @@ def _format_executive_summary(
             )
         lines.append("")
 
-    if analysis_notes:
-        lines.append("**Analyst notes**:")
-        lines.append("")
-        lines.append(analysis_notes)
-        lines.append("")
-
     return lines
+
+
+def _format_analyst_notes(raw_analysis_notes: str) -> list[str]:
+    """Render the raw analyst notes in their own section.
+
+    W1-C: the reporter used to conflate the LLM's ``executive_summary``
+    with the raw notes (it passed ``analysis_notes=report_data.get(
+    "executive_summary", analysis_notes)`` to ``generate_report``),
+    which made the same narrative appear in two places. Now the raw
+    notes — sourced from the previous agent's ``analysis_notes`` field
+    or the kill-chain log — are rendered in their own section, after
+    the methodology, so the executive summary stays a single
+    non-duplicated narrative.
+    """
+    notes = (raw_analysis_notes or "").strip()
+    if not notes:
+        return []
+    return [
+        "## Analyst Notes",
+        "",
+        notes,
+        "",
+    ]
 
 
 def _format_methodology(methodology: dict[str, Any]) -> list[str]:

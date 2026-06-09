@@ -371,6 +371,20 @@ class ReasonerAgent(BaseAgent):
         except Exception as exc:
             logger.error("Reasoner LLM call failed: %s", exc)
             validated = self._basic_validate(raw_findings)
+            # W1-B: persist the basic-validated findings too (the LLM
+            # call may have failed but the surface-check findings are
+            # still useful).
+            try:
+                from src.agents._finding_persistence import persist_findings
+                await persist_findings(
+                    session=session,
+                    engagement_id=payload.get("engagement_id", ""),
+                    findings=validated,
+                    source_agent="reasoner",
+                    target_url=target_url,
+                )
+            except Exception as persist_exc:
+                logger.warning("reasoner (LLM-fail path): persist_findings failed: %s", persist_exc)
             return {
                 "findings": validated, "artifacts": [], "attack_paths": [],
                 "validated_findings": validated,

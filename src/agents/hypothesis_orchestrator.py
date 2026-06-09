@@ -23,6 +23,7 @@ Differences from ResearchLoopAgent:
 from __future__ import annotations
 
 import logging
+import time
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -78,6 +79,15 @@ class HypothesisOrchestrator(BaseAgent):
         self._max_iterations = settings.max_iterations_per_scan
         self._max_orchestration_iterations = MAX_ORCHESTRATION_ITERATIONS
         self._convergence_idle = CONVERGENCE_IDLE_ITERATIONS
+        # W2-A: cumulative budget (defect 3). Replaces the previous
+        # hardcoded 180s per-call timeout that allowed a single stuck
+        # tool call to hang the entire dj1naq.sytes.net scan.
+        self._cumulative_budget_s = float(
+            settings.hypothesis_orchestrator_cumulative_budget_seconds
+        )
+        self._per_call_timeout_s = float(
+            settings.hypothesis_orchestrator_per_call_timeout_seconds
+        )
 
     async def execute(self, payload: dict[str, Any], session: AsyncSession) -> dict[str, Any]:
         """Run the orchestration loop.
@@ -152,6 +162,21 @@ class HypothesisOrchestrator(BaseAgent):
         idle_iterations = 0
         iteration = 0
 
+        # W2-A: cumulative budget deadline (defect 3). Each per-tool
+        # call's per-call timeout is dynamically derived from the
+        # remaining budget, so a slow tool call near the end of the
+        # budget cannot exceed the overall ceiling. The 10s headroom
+        # below lets the orchestrator finalize its result before the
+        # cumulative ceiling is hit.
+        # ``getattr`` with a default lets tests that construct the
+        # orchestrator with ``HypothesisOrchestrator.__new__(...)``
+        # (bypassing ``__init__``) keep working without setting up
+        # the full settings dependency.
+        budget_deadline = time.monotonic() + getattr(
+            self, "_cumulative_budget_s", 900.0
+        )
+        budget_exhausted = False
+
         await log_action(
             session=session,
             action="hypothesis_orchestrator_phase_start",
@@ -165,6 +190,23 @@ class HypothesisOrchestrator(BaseAgent):
         # === Orchestrate → Investigate → Reflect ===
         while iteration < self._max_orchestration_iterations:
             iteration += 1
+
+            # W2-A: check the cumulative budget before doing any more
+            # work. If the budget is gone, stop dispatching and let the
+            # orchestrator finalize its result. This is the key
+            # difference from the previous behavior, which let a
+            # single stuck tool call hang the whole iteration.
+            if time.monotonic() >= budget_deadline:
+                logger.info(
+                    "HypothesisOrchestrator: cumulative budget %.1fs exhausted at "
+                    "iteration %d for engagement %s",
+                    self._cumulative_budget_s,
+                    iteration,
+                    engagement_id,
+                )
+                budget_exhausted = True
+                break
+
             logger.info(
                 "HypothesisOrchestrator iteration %d/%d for engagement %s",
                 iteration,
@@ -197,6 +239,19 @@ class HypothesisOrchestrator(BaseAgent):
             # Phase 2: Investigate each viable hypothesis via engine
             productive = 0
             for hypothesis_data in viable:
+                # W2-A: re-check the budget before each dispatch so a
+                # backlog of viable hypotheses can't blow past the
+                # ceiling. If we're out of budget, stop dispatching
+                # and let the orchestrator finalize.
+                if time.monotonic() >= budget_deadline:
+                    logger.info(
+                        "HypothesisOrchestrator: cumulative budget exhausted before "
+                        "dispatch of hypothesis %s",
+                        hypothesis_data.get("hypothesis_class", ""),
+                    )
+                    budget_exhausted = True
+                    break
+
                 # Persist hypothesis
                 hypothesis = await self._persist_hypothesis(
                     session=session,
@@ -214,6 +269,7 @@ class HypothesisOrchestrator(BaseAgent):
                     session=session,
                     engagement_id=engagement_id,
                     engine=engine,
+                    budget_deadline=budget_deadline,
                 )
 
                 # Update hypothesis status
@@ -243,11 +299,14 @@ class HypothesisOrchestrator(BaseAgent):
                 all_artifacts.extend(investigation_result.get("artifacts", []))
                 productive += 1
 
-            if productive == 0:
+            if productive == 0 and not budget_exhausted:
                 idle_iterations += 1
                 if idle_iterations >= self._convergence_idle:
                     break
                 continue
+
+            if budget_exhausted:
+                break
 
             idle_iterations = 0  # Reset on productive iteration
 
@@ -512,12 +571,25 @@ class HypothesisOrchestrator(BaseAgent):
         session: AsyncSession,
         engagement_id: str,
         engine: Any,
+        budget_deadline: float | None = None,
     ) -> dict[str, Any]:
         """Dispatch a single hypothesis for investigation.
 
         If an engine is available, dispatch via ``engine.submit_and_await()``
         so the job is checkpointed. Otherwise, instantiate the agent class
         directly (for testing without a running engine).
+
+        Args:
+            budget_deadline: ``time.monotonic()`` deadline for the
+                cumulative budget. When provided, the per-call timeout
+                is derived as ``min(per_call_timeout, remaining - 10s)``
+                so a single tool call cannot exceed the cumulative
+                budget. W2-A (defect 3): the previous hardcoded 180s
+                per-call timeout was the source of the live scan
+                hang — a single stuck tool call blocked the entire
+                iteration until the outer 25-min browser ceiling
+                kicked in, by which time 5 invocations had
+                ``completed_at = None``.
         """
         target_url = (
             payload.get("target_url", "")
@@ -544,7 +616,7 @@ class HypothesisOrchestrator(BaseAgent):
         # Record the tool invocation (provenance). The engine will also
         # create a Job record with the same agent_name; this gives us a
         # 1:1 hypothesis → ToolInvocation chain.
-        await self._record_tool_invocation(
+        invocation = await self._record_tool_invocation(
             session=session,
             engagement_id=engagement_id,
             hypothesis_id=hypothesis_id,
@@ -556,46 +628,121 @@ class HypothesisOrchestrator(BaseAgent):
 
         if engine is None:
             # Fallback for tests / non-engine callers
-            return await self._invoke_agent_directly(
-                agent_name=agent_name,
-                payload=investigation_payload,
-                session=session,
-            )
+            try:
+                return await self._invoke_agent_directly(
+                    agent_name=agent_name,
+                    payload=investigation_payload,
+                    session=session,
+                )
+            finally:
+                # W2-A: always mark the invocation complete so the
+                # ``completed_at IS NULL`` invariant holds.
+                await self._mark_tool_invocation_complete(
+                    session=session,
+                    invocation=invocation,
+                    result_summary={"path": "direct", "agent": agent_name},
+                )
 
-        # Engine-mediated dispatch
+        # W2-A: derive the per-call timeout from the remaining budget.
+        # If no budget_deadline was passed (e.g. direct callers in
+        # tests), use the per-call ceiling unchanged. ``getattr``
+        # allows ``__new__``-constructed test instances to bypass
+        # the full ``__init__`` settings dependency.
+        per_call_ceiling = getattr(self, "_per_call_timeout_s", 180.0)
+        if budget_deadline is not None:
+            remaining = budget_deadline - time.monotonic()
+            # 10s headroom: orchestrator needs time to finalize after
+            # the last tool call returns.
+            effective_timeout = max(5.0, min(per_call_ceiling, remaining - 10.0))
+            if remaining <= 10.0:
+                logger.warning(
+                    "HypothesisOrchestrator: budget nearly exhausted (%.1fs "
+                    "remaining) before dispatch of %s; skipping",
+                    remaining,
+                    hypothesis.get("hypothesis_class", ""),
+                )
+                await self._mark_tool_invocation_complete(
+                    session=session,
+                    invocation=invocation,
+                    result_summary={"path": "skipped", "reason": "budget_exhausted"},
+                )
+                return {"findings": [], "artifacts": []}
+        else:
+            effective_timeout = per_call_ceiling
+
+        # Engine-mediated dispatch. try/except/finally ensures the
+        # ``completed_at IS NULL`` invariant holds even when the
+        # engine dispatch raises or times out (defect 3).
         try:
-            # deepseek-v4-pro is slow on Ollama cloud: 120s/timeout × 3
-            # retries per LLM call. A single investigation can run 2-3
-            # LLM calls, so 180s gives margin without letting a stuck
-            # agent stall the whole iteration. Failures fall back to
-            # no-finding results and the reflection phase decides whether
-            # to retry.
-            result = await engine.submit_and_await(
+            try:
+                result = await engine.submit_and_await(
+                    session=session,
+                    engagement_id=engagement_id,
+                    agent_name=agent_name,
+                    payload=investigation_payload,
+                    timeout=effective_timeout,
+                )
+            except Exception as exc:
+                logger.error(
+                    "Engine dispatch failed for hypothesis %s: %s",
+                    hypothesis.get("hypothesis_class", ""),
+                    exc,
+                )
+                await log_action(
+                    session=session,
+                    action="investigation_failed",
+                    actor="hypothesis_orchestrator",
+                    payload={
+                        "engagement_id": engagement_id,
+                        "hypothesis_id": hypothesis_id,
+                        "agent": agent_name,
+                        "error": str(exc)[:500],
+                    },
+                )
+                await self._mark_tool_invocation_complete(
+                    session=session,
+                    invocation=invocation,
+                    result_summary={
+                        "path": "engine",
+                        "agent": agent_name,
+                        "timeout": effective_timeout,
+                        "status": "error",
+                        "error": str(exc)[:200],
+                    },
+                )
+                return {"findings": [], "artifacts": []}
+
+            payload_result = result or {"findings": [], "artifacts": []}
+            await self._mark_tool_invocation_complete(
                 session=session,
-                engagement_id=engagement_id,
-                agent_name=agent_name,
-                payload=investigation_payload,
-                timeout=180.0,
-            )
-            return result or {"findings": [], "artifacts": []}
-        except Exception as exc:
-            logger.error(
-                "Engine dispatch failed for hypothesis %s: %s",
-                hypothesis.get("hypothesis_class", ""),
-                exc,
-            )
-            await log_action(
-                session=session,
-                action="investigation_failed",
-                actor="hypothesis_orchestrator",
-                payload={
-                    "engagement_id": engagement_id,
-                    "hypothesis_id": hypothesis_id,
+                invocation=invocation,
+                result_summary={
+                    "path": "engine",
                     "agent": agent_name,
-                    "error": str(exc)[:500],
+                    "timeout": effective_timeout,
+                    "findings_count": len(payload_result.get("findings", [])),
+                    "status": "ok",
                 },
             )
-            return {"findings": [], "artifacts": []}
+            return payload_result
+        except BaseException:
+            # Defense in depth: any unexpected error (e.g. session
+            # flush failure) still must not leave the invocation row
+            # in the ``completed_at IS NULL`` state. Re-raise after
+            # marking.
+            try:
+                await self._mark_tool_invocation_complete(
+                    session=session,
+                    invocation=invocation,
+                    result_summary={
+                        "path": "engine",
+                        "agent": agent_name,
+                        "status": "unexpected_error",
+                    },
+                )
+            except Exception:
+                pass
+            raise
 
     async def _invoke_agent_directly(
         self, agent_name: str, payload: dict[str, Any], session: AsyncSession
@@ -727,7 +874,17 @@ class HypothesisOrchestrator(BaseAgent):
         target: str,
         params: dict[str, Any],
     ) -> ToolInvocation:
-        """Record a tool invocation for provenance tracking."""
+        """Record a tool invocation for provenance tracking.
+
+        The returned ``ToolInvocation`` is intentionally flushed with
+        only ``started_at`` set. The dispatch site is responsible for
+        setting ``completed_at`` and ``result_summary`` in a
+        ``try/finally`` block so the provenance row never gets stuck
+        in the ``completed_at IS NULL`` state — that was defect 3
+        (the live dj1naq.sytes.net scan had 5 rows in that state
+        because the orchestrator's tool calls hung and never reached
+        the completion-marking code).
+        """
         invocation = ToolInvocation(
             id=str(uuid4()),
             engagement_id=engagement_id,
@@ -741,6 +898,31 @@ class HypothesisOrchestrator(BaseAgent):
         session.add(invocation)
         await session.flush()
         return invocation
+
+    async def _mark_tool_invocation_complete(
+        self,
+        session: AsyncSession,
+        invocation: ToolInvocation,
+        result_summary: dict[str, Any] | None = None,
+    ) -> None:
+        """Set ``completed_at`` and ``result_summary`` on a tool invocation.
+
+        Always called in a ``try/finally`` by the dispatch site so the
+        ``completed_at IS NULL`` invariant holds even when the dispatch
+        raises. ``result_summary`` is JSON-coerced (sets → lists) so the
+        JSON column doesn't crash on set/tuple types
+        (``egats-set-serialization`` memory).
+        """
+        invocation.completed_at = datetime.now(UTC)
+        if result_summary is not None:
+            safe: dict[str, Any] = {}
+            for k, v in result_summary.items():
+                if isinstance(v, (set, tuple)):
+                    safe[k] = list(v)
+                else:
+                    safe[k] = v
+            invocation.result_summary = safe
+        await session.flush()
 
     async def _persist_finding(
         self,

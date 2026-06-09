@@ -157,7 +157,13 @@ class ReporterAgent(BaseAgent):
                 findings=validated_findings,
                 attack_paths=attack_paths,
                 surface=surface,
-                analysis_notes=report_data.get("executive_summary", analysis_notes),
+                # W1-C: pass the raw analyst notes (collected from
+                # the previous agent) as ``raw_analysis_notes``. The
+                # legacy ``analysis_notes`` kwarg is kept for API
+                # stability but the dedicated kwarg drives the new
+                # "## Analyst Notes" section, so the LLM's executive
+                # summary and the raw notes are no longer conflated.
+                raw_analysis_notes=analysis_notes,
                 risk_rating=risk_rating,
                 proofs_of_concept=proofs_of_concept,
                 llm_narrative=report_data,

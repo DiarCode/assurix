@@ -198,6 +198,25 @@ class WorkflowEngine:
             payload={"iteration": 0, "phase": "initial", "target_url": target_url, **_extra},
             priority=1,
         )
+        # W1-A: build a small LinkGraph so the planner's BFS recon has
+        # adjacency to traverse. The graph is built off the main session
+        # (it's an HTTP fetch, not a DB write) and serialised into the
+        # next-planner payload as ``graph_dict``. On planner re-enqueue
+        # (LATS backtracking at engine.py:671) we reuse the cached dict
+        # from engagement.config rather than re-crawling.
+        try:
+            from src.agents.recon.link_graph import LinkGraph
+            import httpx as _httpx
+            graph = LinkGraph(target_url)
+            if target_url:
+                async with _httpx.AsyncClient(timeout=5.0, follow_redirects=True) as _client:
+                    await graph.populate(target_url, client=_client, max_pages=20, max_depth=2)
+            cfg = dict(engagement.config or {})
+            cfg["link_graph"] = graph.to_dict()
+            engagement.config = cfg
+            await session.flush()
+        except Exception as exc:  # pragma: no cover — best-effort
+            logger.warning("LinkGraph build failed for %s: %s", target_url, exc)
         await log_action(
             session=session,
             action="engagement_started",
@@ -476,12 +495,37 @@ class WorkflowEngine:
                                 if EngagementStateMachine.can_transition(
                                     engagement.status, EngagementStatus.COMPLETED
                                 ):
-                                    engagement.status = EngagementStatus.COMPLETED
-                                    engagement.completed_at = datetime.now(UTC)
-                                    await self.events.emit(
-                                        "engagement_completed",
-                                        {"engagement_id": engagement_id},
+                                    # W2-B (defect 4): drain check. A
+                                    # non-zero active count means a
+                                    # tool invocation is still in
+                                    # flight; do not transition the
+                                    # engagement to COMPLETED. The
+                                    # polling loop's next iteration
+                                    # will pick the still-pending job
+                                    # up and process it. The dj1naq.
+                                    # sytes.net engagement had 5
+                                    # ``started_at`` rows with
+                                    # ``completed_at IS NULL`` and was
+                                    # marked COMPLETED anyway because
+                                    # this check was missing.
+                                    active = await self.scheduler.count_active(
+                                        session, engagement_id
                                     )
+                                    if active > 0:
+                                        logger.warning(
+                                            "Refusing terminal transition for "
+                                            "engagement %s: %d active job(s) "
+                                            "still in flight",
+                                            engagement_id,
+                                            active,
+                                        )
+                                    else:
+                                        engagement.status = EngagementStatus.COMPLETED
+                                        engagement.completed_at = datetime.now(UTC)
+                                        await self.events.emit(
+                                            "engagement_completed",
+                                            {"engagement_id": engagement_id},
+                                        )
                     elif agent_name == "depth_pass":
                         # Post-depth-pass: if the agent signalled completion
                         # (its result dict carries ``depth_pass_complete``),
@@ -492,12 +536,30 @@ class WorkflowEngine:
                         if depth_pass_complete and EngagementStateMachine.can_transition(
                             engagement.status, EngagementStatus.COMPLETED
                         ):
-                            engagement.status = EngagementStatus.COMPLETED
-                            engagement.completed_at = datetime.now(UTC)
-                            await self.events.emit(
-                                "engagement_completed",
-                                {"engagement_id": engagement_id},
+                            # W2-B (defect 4): drain check. Same
+                            # invariant as the reporter branch — the
+                            # depth pass might be the last in a chain
+                            # that includes still-pending background
+                            # tool calls (e.g. the depth-pass WAF
+                            # bypass phase spawning sub-agents).
+                            active = await self.scheduler.count_active(
+                                session, engagement_id
                             )
+                            if active > 0:
+                                logger.warning(
+                                    "Refusing depth-pass terminal transition "
+                                    "for engagement %s: %d active job(s) "
+                                    "still in flight",
+                                    engagement_id,
+                                    active,
+                                )
+                            else:
+                                engagement.status = EngagementStatus.COMPLETED
+                                engagement.completed_at = datetime.now(UTC)
+                                await self.events.emit(
+                                    "engagement_completed",
+                                    {"engagement_id": engagement_id},
+                                )
                         # Clear the idempotency lock so a manual rerun can
                         # start a fresh depth pass.
                         cfg = dict(engagement.config or {})
@@ -668,18 +730,29 @@ class WorkflowEngine:
                             engagement.config.get("max_iterations", 50),
                         )
                         if next_agent:
+                            _next_payload: dict[str, Any] = {
+                                "iteration": engagement.iteration_count,
+                                "previous_result": result,
+                                "target_url": payload.get("target_url", ""),
+                                **_extra,
+                            }
+                            # W1-A: when the next agent is the planner,
+                            # re-attach the cached link graph so the BFS
+                            # recon has adjacency to traverse without
+                            # re-crawling. The graph was built once in
+                            # start_engagement() and stored under
+                            # engagement.config["link_graph"].
+                            if next_agent == "planner":
+                                _cached_graph = (engagement.config or {}).get("link_graph")
+                                if _cached_graph:
+                                    _next_payload["graph_dict"] = _cached_graph
                             if next_agent == "planner":
                                 engagement.iteration_count += 1
                             await self.scheduler.enqueue(
                                 session=session,
                                 engagement_id=engagement_id,
                                 agent_name=next_agent,
-                                payload={
-                                    "iteration": engagement.iteration_count,
-                                    "previous_result": result,
-                                    "target_url": payload.get("target_url", ""),
-                                    **_extra,
-                                },
+                                payload=_next_payload,
                                 priority=1,
                             )
                         else:

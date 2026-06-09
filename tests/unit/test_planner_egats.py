@@ -302,6 +302,33 @@ class TestEGATSPlanner:
         ))
         assert result["phases"][0]["skipped"] is True
 
+    def test_recon_runs_when_graph_dict_supplied(self) -> None:
+        """W1-A: the planner must accept a serialised graph_dict and
+        actually run BFS over it. Defect 1 is fixed when ``graph_dict``
+        is no longer treated as a no-op."""
+        from src.agents.recon.link_graph import LinkGraph
+        g = LinkGraph("https://t.example/")
+        g.add_edge("https://t.example/", "https://t.example/a")
+        g.add_edge("https://t.example/a", "https://t.example/b")
+        p = EGATSPlanner(max_iterations=10)
+        result = asyncio.run(p.execute(
+            payload={
+                "target_url": "https://t.example/",
+                "candidates": [],
+                "graph_dict": g.to_dict(),
+                "dry_run": True,
+            },
+            session=None,
+        ))
+        recon = result["phases"][0]
+        assert recon["skipped"] is False
+        # The BFS must have visited the root and its neighbors (capped by
+        # the recon budget = 30% of 10 = 3 nodes).
+        assert "https://t.example/" in recon["visited"]
+        # Edges are pairs of [src, dst] — at least one edge should be
+        # present from the populated adjacency.
+        assert len(recon["edges"]) >= 1
+
     def test_tdi_sort_is_descending(self) -> None:
         p = EGATSPlanner(max_iterations=20)
         # High chain_length, no evidence → high TDI
