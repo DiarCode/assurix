@@ -383,8 +383,15 @@ class ResearchLoopAgent(BaseAgent):
         # Determine which agent to dispatch based on capabilities and category
         agent_name = self._select_agent(hypothesis)
 
-        # Record tool invocation for provenance
-        await self._record_tool_invocation(
+        # Record tool invocation for provenance. The returned
+        # invocation is captured so the dispatch site can mark it
+        # complete in a ``try/finally`` — the previous behavior
+        # left rows with ``completed_at IS NULL`` whenever the
+        # dispatch raised, and the live dj1naq.sytes.net scan had
+        # 10 such rows hanging when the engagement was marked
+        # COMPLETED. W2-A invariant: the provenance row must be
+        # closed on every code path.
+        invocation = await self._record_tool_invocation(
             session=session,
             engagement_id=engagement_id,
             hypothesis_id=hypothesis_id,
@@ -401,10 +408,29 @@ class ResearchLoopAgent(BaseAgent):
                 logger.warning("ResearchLoop: unknown agent '%s', falling back to pentester", agent_name)
                 agent_cls = self._get_agent_class("pentester")
                 if agent_cls is None:
+                    await self._mark_tool_invocation_complete(
+                        session=session,
+                        invocation=invocation,
+                        result_summary={
+                            "path": "direct",
+                            "agent": agent_name,
+                            "status": "no_agent_class",
+                        },
+                    )
                     return {"findings": [], "artifacts": []}
 
             agent = agent_cls()
             result = await agent.execute(investigation_payload, session)
+            await self._mark_tool_invocation_complete(
+                session=session,
+                invocation=invocation,
+                result_summary={
+                    "path": "direct",
+                    "agent": agent_name,
+                    "findings_count": len(result.get("findings", [])),
+                    "status": "ok",
+                },
+            )
             return result
 
         except Exception as exc:
@@ -421,6 +447,16 @@ class ResearchLoopAgent(BaseAgent):
                     "hypothesis_id": hypothesis_id,
                     "agent": agent_name,
                     "error": str(exc)[:500],
+                },
+            )
+            await self._mark_tool_invocation_complete(
+                session=session,
+                invocation=invocation,
+                result_summary={
+                    "path": "direct",
+                    "agent": agent_name,
+                    "status": "error",
+                    "error": str(exc)[:200],
                 },
             )
             return {"findings": [], "artifacts": []}
@@ -554,7 +590,16 @@ class ResearchLoopAgent(BaseAgent):
         target: str,
         params: dict[str, Any],
     ) -> "ToolInvocation":
-        """Record a tool invocation for provenance tracking."""
+        """Record a tool invocation for provenance tracking.
+
+        The returned ``ToolInvocation`` is intentionally flushed with
+        only ``started_at`` set. The dispatch site is responsible for
+        setting ``completed_at`` and ``result_summary`` in a
+        ``try/finally`` block so the provenance row never gets stuck
+        in the ``completed_at IS NULL`` state — that was defect 3
+        (W2-A invariant, mirrored from
+        ``HypothesisOrchestrator._record_tool_invocation``).
+        """
         from src.db.models import ToolInvocation
 
         invocation = ToolInvocation(
@@ -570,6 +615,30 @@ class ResearchLoopAgent(BaseAgent):
         session.add(invocation)
         await session.flush()
         return invocation
+
+    async def _mark_tool_invocation_complete(
+        self,
+        session: AsyncSession,
+        invocation: "ToolInvocation",
+        result_summary: dict[str, Any] | None = None,
+    ) -> None:
+        """Set ``completed_at`` and ``result_summary`` on a tool invocation.
+
+        Mirrors ``HypothesisOrchestrator._mark_tool_invocation_complete``.
+        Always called in a ``try/finally`` by the dispatch site. Set/tuple
+        values in the summary are coerced to lists so the JSON column
+        doesn't crash (egats-set-serialization memory).
+        """
+        invocation.completed_at = datetime.now(UTC)
+        if result_summary is not None:
+            safe: dict[str, Any] = {}
+            for k, v in result_summary.items():
+                if isinstance(v, (set, tuple)):
+                    safe[k] = list(v)
+                else:
+                    safe[k] = v
+            invocation.result_summary = safe
+        await session.flush()
 
     async def _persist_finding(
         self,

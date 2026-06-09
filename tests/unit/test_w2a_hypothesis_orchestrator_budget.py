@@ -354,3 +354,97 @@ class TestCumulativeBudgetBreaksTheLoop:
         # payload it can render.
         assert "findings" in result
         assert isinstance(result["findings"], list)
+
+
+class TestResearchLoopW2AInvariant:
+    """The W2-A invariant (closed tool_invocations) also applies to
+    ResearchLoop's direct-dispatch path, which is what the live
+    engine actually takes. The live dj1naq.sytes.net scan left 10
+    rows with ``completed_at IS NULL`` because the original
+    ``research_loop._investigate_hypothesis`` only set
+    ``started_at``. This test asserts the fix."""
+
+    def test_invoke_agent_directly_marks_invocation_complete(self) -> None:
+        """After a successful direct agent dispatch via
+        ``_investigate_hypothesis``, the tool invocation row is
+        closed with ``status='ok'``."""
+        from src.agents.research_loop import ResearchLoopAgent
+
+        eng, (Session, eng_id) = _build_session_factory()
+        loop = ResearchLoopAgent()
+
+        # Mock the agent class so we don't actually instantiate a
+        # Pentester/Webapp. Returns a result with one finding.
+        class FakeAgent:
+            async def execute(self, payload, session):
+                return {
+                    "findings": [{
+                        "title": "x", "severity": "low",
+                        "confidence_score": 0.5,
+                    }],
+                    "artifacts": [],
+                }
+
+        loop._get_agent_class = lambda name: FakeAgent  # type: ignore[assignment]
+
+        async def _go():
+            from uuid import uuid4 as _uuid
+            hyp_id = str(_uuid())
+            # Persist a hypothesis row first (the real code does this
+            # too, but we're testing the invocation close-out).
+            from src.db.models import Hypothesis, HypothesisStatus
+            async with Session() as s:
+                hyp = Hypothesis(
+                    id=hyp_id, engagement_id=eng_id,
+                    hypothesis_class="test", source="pattern_match",
+                    description="t", confidence=0.5,
+                    status=HypothesisStatus.CANDIDATE,
+                    attack_category="injection",
+                    required_capabilities=[], falsification_criteria="",
+                )
+                s.add(hyp)
+                e = (await s.execute(
+                    __import__("sqlalchemy").select(Engagement).where(
+                        Engagement.id == eng_id
+                    )
+                )).scalar_one()
+                e.status = "researching"
+                await s.commit()
+
+                result = await loop._investigate_hypothesis(
+                    hypothesis={
+                        "hypothesis_class": "test",
+                        "attack_category": "injection",
+                        "description": "t",
+                        "required_capabilities": [],
+                        "falsification_criteria": "",
+                        "confidence": 0.5,
+                    },
+                    hypothesis_id=hyp_id,
+                    payload={
+                        "engagement_id": eng_id,
+                        "target_url": "https://t",
+                    },
+                    surface={},
+                    session=s,
+                    engagement_id=eng_id,
+                )
+                await s.commit()
+
+                from src.db.models import ToolInvocation
+                from sqlalchemy import select
+                rows = (await s.execute(
+                    select(ToolInvocation).where(
+                        ToolInvocation.engagement_id == eng_id
+                    )
+                )).scalars().all()
+                return result, rows
+
+        result, rows = asyncio.run(_go())
+        # The agent returned a real finding. The proof of the fix is
+        # in the DB (the invocation row is closed).
+        assert len(result.get("findings", [])) == 1
+        assert len(rows) == 1
+        assert rows[0].completed_at is not None
+        assert rows[0].result_summary.get("status") == "ok"
+        assert rows[0].result_summary.get("findings_count") == 1
